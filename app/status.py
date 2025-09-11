@@ -12,7 +12,7 @@ from app.utils import dynamic_timestamp
 
 STATUS_MESSAGE_TEMPLATE = """
 ### Commit
-{commit_hash}
+{commit}
 ### Uptime
 * Launch time: {launch_time}
 * Last login time: {last_login_time}
@@ -35,8 +35,18 @@ class BotStatus:
     last_scan_results: tuple[dt.datetime, int, int] | None = None
     last_sitemap_refresh: dt.datetime | None = None
 
+    git_hash: str | None
+    git_remote_url: str | None
+    current_git_message: str
+
     def __init__(self) -> None:
         self.launch_time = dt.datetime.now(tz=dt.UTC)
+        self.git_remote_url, self.git_hash = self._get_commit_data()
+        self.current_git_message = (
+            f"[`{self.git_hash}`](<{self.git_remote_url}/commit/{self.git_hash}>)"
+            if self.git_hash
+            else "Unknown"
+        )
 
     @property
     def initialized(self) -> bool:
@@ -83,16 +93,17 @@ class BotStatus:
         )
 
     @staticmethod
-    def _get_commit_hash() -> str:
+    def _get_commit_data() -> tuple[str, str] | tuple[None, None]:
         try:
             return (
-                subprocess.check_output(["git", "rev-parse", "HEAD"])
+                subprocess.check_output(["git", "config", "--get", "remote.origin.url"])
                 .decode()
                 .strip()
-                .join("``")
+                .removesuffix(".git"),
+                subprocess.check_output(["git", "rev-parse", "HEAD"]).decode().strip(),
             )
         except subprocess.CalledProcessError:
-            return "Unknown"
+            return None, None
 
     async def export(self) -> dict[str, str | SimpleNamespace]:
         """
@@ -102,7 +113,7 @@ class BotStatus:
         assert self.last_login_time is not None
         assert self.last_sitemap_refresh is not None
         return {
-            "commit_hash": self._get_commit_hash(),
+            "commit": self.current_git_message,
             "launch_time": dynamic_timestamp(self.launch_time, "R"),
             "last_login_time": dynamic_timestamp(self.last_login_time, "R"),
             "last_sitemap_refresh": dynamic_timestamp(self.last_sitemap_refresh, "R"),

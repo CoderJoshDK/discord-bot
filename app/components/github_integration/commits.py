@@ -4,7 +4,8 @@ import asyncio
 import copy
 import re
 import string
-from typing import TYPE_CHECKING, NamedTuple, final, override
+from types import SimpleNamespace
+from typing import TYPE_CHECKING, NamedTuple, cast, final, override
 
 import discord as dc
 from discord.ext import commands
@@ -131,6 +132,17 @@ class Commits(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
+        if commit_hash := self.bot.bot_status.git_hash:
+            links = await self.commit_links(
+                cast(
+                    "dc.Message",
+                    SimpleNamespace(
+                        content=f"{self.bot.bot_status.git_remote_url}/commit/{commit_hash}"
+                    ),
+                )
+            )
+            if links.item_count:
+                self.bot.bot_status.current_git_message = links.content
         await load_emojis(self.bot)
 
     @override
