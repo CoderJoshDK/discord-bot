@@ -82,8 +82,8 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
     @webhook.event.issue_comment
     async def log_comment_event(event: events.IssueComment) -> None:
         logger.info(
-            "received a {!r} event for issue #{} from {}",
-            f"comment {event.action}",
+            "received a 'comment {}'' event for issue #{} from {}",
+            event.action,
             event.issue.number,
             format_event_sender(event.sender),
         )
