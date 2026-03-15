@@ -68,12 +68,21 @@ def issue_embed_content(
     )
 
 
-def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:
+def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noqa: PLR0915
     @webhook.event.issues
     async def log_event(event: events.Issues) -> None:
         logger.info(
             "received event {!r} for issue #{} from {}",
             event.action,
+            event.issue.number,
+            format_event_sender(event.sender),
+        )
+
+    @webhook.event.issue_comment
+    async def log_comment_event(event: events.IssueComment) -> None:
+        logger.info(
+            "received a {!r} event for issue #{} from {}",
+            f"comment {event.action}",
             event.issue.number,
             format_event_sender(event.sender),
         )

@@ -74,6 +74,24 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
             format_event_sender(event.sender),
         )
 
+    @webhook.event.pull_request_review
+    async def log_review_event(event: events.PullRequestReview) -> None:
+        logger.info(
+            "received a {!r} event for PR #{} from {}",
+            f"review {event.action}",
+            event.pull_request.number,
+            format_event_sender(event.sender),
+        )
+
+    @webhook.event.pull_request_review_comment
+    async def log_review_comment_event(event: events.PullRequestReviewComment) -> None:
+        logger.info(
+            "received a {!r} event for PR #{} from {}",
+            f"review comment {event.action}",
+            event.pull_request.number,
+            format_event_sender(event.sender),
+        )
+
     @webhook.event.pull_request.opened
     async def opened(event: events.PullRequestOpened) -> None:
         pr = event.pull_request
