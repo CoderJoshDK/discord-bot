@@ -27,18 +27,22 @@ class TTRCache[KT, VT](ABC):
     async def fetch(self, key: KT) -> None:
         pass
 
-    async def _refresh(self, key: KT) -> None:
+    def _prune_expired_keys(self) -> None:
+        cache_name = type(self).__name__
+        now = dt.datetime.now(tz=dt.UTC)
+        for key in {
+            key
+            for key, (timestamp, _) in self._cache.items()
+            if now - timestamp >= self._ttr
+        }:
+            logger.debug("dropping expired {} key {!r}", cache_name, key)
+            del self._cache[key]
+
+    async def get(self, key: KT) -> VT | None:
+        self._prune_expired_keys()
         if key not in self:
             logger.debug("{} not in cache; fetching", key)
             await self.fetch(key)
-            return
-        timestamp, *_ = self[key]
-        if dt.datetime.now(tz=dt.UTC) - timestamp >= self._ttr:
-            logger.debug("refreshing outdated key {}", key)
-            await self.fetch(key)
-
-    async def get(self, key: KT) -> VT | None:
-        await self._refresh(key)
         try:
             _, value = self[key]
         except KeyError:
