@@ -36,8 +36,7 @@ COMMIT_SHA_PATTERN = re.compile(
         r"(?P<repo>\b[a-z0-9\-\._]+)"
         r"(?P<sep>@|/commit/|/blob/)"
     r")?"
-    # Ignore SHAs preceded by sequences like <@ or <#, as those are probably snowflakes.
-    r"(?<!<[^a-f0-9\s])(?P<sha>[a-f0-9]{7,40})\b",
+    r"(?P<sha>[a-f0-9]{7,40})\b",
     re.IGNORECASE,
 )  # fmt: skip
 
@@ -108,6 +107,9 @@ class CommitLinks(commands.Cog):
     ) -> AsyncGenerator[CommitKey]:
         valid_signatures = 0
         for site, owner, repo, sep, sha in sigs:
+            if not (site or owner or repo or sep) and sha.isdecimal():
+                # A plain number, likely not a SHA.
+                continue
             if sep == "/blob/":
                 continue  # This is likely a code link
             if bool(site) != (sep == "/commit/"):
