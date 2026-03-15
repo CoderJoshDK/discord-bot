@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 DISCUSSION_DIV_TAG = re.compile(
     r"\s*<div type='discussions-op-text'>((?:.|\s)*?)\s*</div>\s*", re.MULTILINE
 )
+VOUCH_BOT_LOGIN = "ghostty-vouch[bot]"
 
 
 def remove_discussion_div(body: str | None) -> str | None:
@@ -68,11 +69,20 @@ def issue_embed_content(
     )
 
 
-def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:
+def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noqa: PLR0915
     @webhook.event.issues
     async def log_event(event: events.Issues) -> None:
         logger.info(
             "received event {!r} for issue #{} from {}",
+            event.action,
+            event.issue.number,
+            format_event_sender(event.sender),
+        )
+
+    @webhook.event.issue_comment
+    async def log_comment_event(event: events.IssueComment) -> None:
+        logger.info(
+            "received a 'comment {}'' event for issue #{} from {}",
             event.action,
             event.issue.number,
             format_event_sender(event.sender),
@@ -167,6 +177,11 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:
 
     @webhook.event.issue_comment.created
     async def comment_created(event: events.IssueCommentCreated) -> None:
+        if event.sender.login == VOUCH_BOT_LOGIN:
+            # Ignore, it's spammy -- a PR/issue closed event is a good enough hint.
+            logger.info("Ignoring ghostty-vouch comment")
+            return
+
         issue = event.issue
         title = "commented on "
         if issue.pull_request:

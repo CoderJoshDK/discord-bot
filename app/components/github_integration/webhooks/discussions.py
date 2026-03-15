@@ -80,6 +80,15 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:
             format_event_sender(event.sender),
         )
 
+    @webhook.event.discussion_comment
+    async def log_comment_event(event: events.DiscussionComment) -> None:
+        logger.info(
+            "received a 'comment {}' event for discussion #{} from {}",
+            event.action,
+            event.discussion.number,
+            format_event_sender(event.sender),
+        )
+
     @webhook.event.discussion.created
     async def created(event: events.DiscussionCreated) -> None:
         discussion = event.discussion

@@ -26,6 +26,10 @@ if TYPE_CHECKING:
     from app.bot import EmojiName
     from app.components.github_integration.webhooks.vouch import VouchQueue
 
+# This looks like a silly const but I wanted to have a single place to document this:
+# it looks like GitHub special-cases Copilot, and while the REST API says its login is
+# `copilot-pull-request-reviewer[bot]`, webhook events actually just use `Copilot`.
+COPILOT_LOGIN = "Copilot"
 HUNK_TEMPLATE = "```diff\n{hunk}\n```\n\n{content}"
 HUNK_CODEBLOCK_OVERHEAD = len("```diff\n\n```\n\n")
 
@@ -69,6 +73,24 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
     async def log_event(event: events.PullRequest) -> None:
         logger.info(
             "received event {!r} for PR #{} from {}",
+            event.action,
+            event.pull_request.number,
+            format_event_sender(event.sender),
+        )
+
+    @webhook.event.pull_request_review
+    async def log_review_event(event: events.PullRequestReview) -> None:
+        logger.info(
+            "received a 'review {}' event for PR #{} from {}",
+            event.action,
+            event.pull_request.number,
+            format_event_sender(event.sender),
+        )
+
+    @webhook.event.pull_request_review_comment
+    async def log_review_comment_event(event: events.PullRequestReviewComment) -> None:
+        logger.info(
+            "received a 'review comment {}' event for PR #{} from {}",
             event.action,
             event.pull_request.number,
             format_event_sender(event.sender),
@@ -216,6 +238,11 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
             # reduce spam.
             return
 
+        if event.sender.login == COPILOT_LOGIN:
+            # The bodies of Copilot reviews are usually verbose (and often trash),
+            # so just drop it.
+            review.body = ""
+
         match review.state:
             case "approved":
                 color, title = "green", "approved"
@@ -261,6 +288,11 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
     @webhook.event.pull_request_review_comment.created
     async def created(event: events.PullRequestReviewCommentCreated) -> None:
         pr, content = event.pull_request, event.comment.body
+
+        if event.sender.login == COPILOT_LOGIN:
+            # Ignore, we don't need the spam.
+            logger.info("Copilot review comment dropped")
+            return
 
         hunk = _reduce_diff_hunk(event.comment.diff_hunk)
         hunk_can_fit = 500 - len(content) - len(hunk) - HUNK_CODEBLOCK_OVERHEAD >= 0
