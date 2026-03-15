@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 DISCUSSION_DIV_TAG = re.compile(
     r"\s*<div type='discussions-op-text'>((?:.|\s)*?)\s*</div>\s*", re.MULTILINE
 )
+VOUCH_BOT_LOGIN = "ghostty-vouch[bot]"
 
 
 def remove_discussion_div(body: str | None) -> str | None:
@@ -176,6 +177,11 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
 
     @webhook.event.issue_comment.created
     async def comment_created(event: events.IssueCommentCreated) -> None:
+        if event.sender.login == VOUCH_BOT_LOGIN:
+            # Ignore, it's spammy -- a PR/issue closed event is a good enough hint.
+            logger.info("Ignoring ghostty-vouch comment")
+            return
+
         issue = event.issue
         title = "commented on "
         if issue.pull_request:
