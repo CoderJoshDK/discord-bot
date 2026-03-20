@@ -51,25 +51,26 @@ EVENT_COLOR = 0x3498DB  # blue
 #    (_get_event() isn't even called) if it's not available there because fetching them
 #    throws a 404.
 #  - deployment_environment_changed — this theoretically could be supported, but it has
-#    not yet been determined how to create this: if you see this in the wild or are able
-#    to create such an event, please open an issue with a link to the event in question!
-#  - mentioned, subscribed, unsubscribed, user_blocked — these don't make sense, as they
-#    don't resemble anything you could find on the timeline (which is the precondition
-#    for obtaining a link to it without somehow using the API). unsubscribed also isn't
+#    not yet been determined how to procure this: if you see this in the wild or are
+#    able to create such an event, please open an issue with a link to the event in
+#    question!
+#  - mentioned, subscribed, unsubscribed — these don't make sense, as they don't
+#    resemble anything you could find on the timeline (which is the precondition for
+#    obtaining a link to it without somehow using the API). unsubscribed also isn't
 #    available from the REST API for issue events.
-# Furthermore, many events below are not documented, and have been obtained from running
-# assorted links obtained from the timeline UI through the API. Thus, this list of
-# supported events is not complete: it is simply ones the maintainers remembered seeing
-# or noticed while doing something completely unrelated. A URL to example events is
-# provided above each event, to facilitate future modifications without needing to hunt
-# through assorted GitHub repositories to find suitable event links. If you ever find
-# a link for which Ghostty Bot responds with "Unsupported event", please open an issue!
-# Finally, many events below do not have as much information as is available in GitHub's
-# UI, because for some reason GitHub's API rarely includes most important information:
-# the only things that is consistently present is the event name, actor, timestamp, and
-# issue/PR. All events below are supported only to the extent possible; quantity is
-# valued over quality since it's rarely possible to provide any more than a general
-# description.
+# Furthermore, many events below are not in GitHub's documentation, and have been
+# obtained from running assorted links obtained from the timeline UI through the API.
+# Thus, this list of supported events is not complete: it is simply ones the maintainers
+# remembered seeing or noticed while doing something completely unrelated. A URL to
+# example events is provided above each event, to facilitate future modifications
+# without needing to hunt through assorted GitHub repositories to find suitable event
+# links. If you ever find a link for which Ghostty Bot responds with "Unsupported
+# event", please open an issue, including the link! Finally, many events below do not
+# have as much information as is available in GitHub's UI, because for some reason
+# GitHub's API rarely includes most important information: the only things that is
+# consistently present is the event name, actor, timestamp, and issue/PR. All events
+# below are supported only to the extent possible; quantity is valued over quality since
+# it's rarely possible to provide any more than a general description.
 ENTITY_UPDATE_EVENTS = frozenset({
     # https://github.com/ghostty-org/ghostty/issues/9395#event-20597662923
     # https://github.com/ghostty-org/ghostty/issues/9724#event-21209589708
@@ -255,6 +256,8 @@ SUPPORTED_EVENTS: dict[str, str | Callable[[IssueEvent], str]] = {
     "project_v2_item_status_changed": "Changed the status of this in a project",
     # https://github.com/microsoft/sudo/issues/2#event-13350207312
     "comment_deleted": "Deleted a comment",
+    # https://github.com/xtermjs/xterm.js/issues/5686#event-23575567225
+    "user_blocked": "Blocked a user",
 }
 
 
