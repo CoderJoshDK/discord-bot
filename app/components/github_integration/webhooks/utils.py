@@ -133,16 +133,20 @@ async def send_edit_difference(
             # they just take up a lot of the 750 available characters.
             diff_lines = islice(diff_lines, 2, None)
         diff = truncate("\n".join(diff_lines), 750 - len("```diff\n\n```"))
+        verb = "edited"
         content = f"```diff\n{diff}\n```"
     elif changes.title:
-        content = f'Renamed from "{changes.title.from_}" to "{event_object.title}"'
+        # GitHub's title limit is 256 characters, so this will never exceed 526
+        # characters.
+        verb = "renamed"
+        content = f"```diff\n-{changes.title.from_}\n+{event_object.title}```"
     else:
         return
 
     assert event.sender
     await send_embed(
         event.sender,
-        content_generator(event_object, "edited {}", None, description=content),
+        content_generator(event_object, f"{verb} {{}}", None, description=content),
         footer_generator(event_object),
     )
 
