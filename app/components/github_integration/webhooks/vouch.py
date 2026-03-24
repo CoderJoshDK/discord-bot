@@ -35,7 +35,9 @@ class VouchQueueEntry(NamedTuple):
 def find_vouch_command(body: str) -> VouchKind | None:
     if not body.startswith("!"):
         return None
-    if (command := body.partition(" ")[0].removeprefix("!")) in VOUCH_KIND_COLORS:
+    if (
+        command := body.partition(" ")[0].removeprefix("!").strip()
+    ) in VOUCH_KIND_COLORS:
         return command
     return None
 
