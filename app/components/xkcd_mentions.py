@@ -137,14 +137,23 @@ class XKCDMentions(commands.Cog):
             return False
 
         # Filter out symbols to catch things like `foo*, bar`. Don't remove backticks to
-        # avoid catching code blocks such as "`foo*`".
+        # avoid catching code blocks such as "`foo*`". Don't remove backslashes to be
+        # able to discard \* later.
         words = "".join(
-            c for c in message.content if c in ("*", "`") or c.isalnum() or c.isspace()
+            c for c in message.content if c in "*`\\" or c.isalnum() or c.isspace()
         ).split()
-        # words[:-1] is used to ignore the last word, so that postfix asterisk
-        # corrections such as `fairy floss*` aren't caught. This won't skip things like
-        # `fairy floss* sorry I forgot I'm Australian`, but those are very unlikely.
-        has_asterisk = any(w.endswith("*") for w in words[:-1])
+        has_asterisk = any(
+            w.endswith("*")
+            # Skip two or more asterisks (foo** and foo*** rarely denote footnotes).
+            and not w.endswith("**")
+            # Skip escaped asterisks (likely Markdown syntax).
+            and not w.endswith("\\*")
+            # words[:-1] is used to ignore the last word, so that postfix asterisk
+            # corrections such as `fairy floss*` aren't caught. This won't skip things
+            # like `fairy floss* sorry I forgot I'm Australian`, but those are very
+            # unlikely.
+            for w in words[:-1]
+        )
         # Footnotes start with an asterisk. This also filters out any Markdown syntax
         # such as `*foo*`, `**bar**`, or `some**thing**`. Other cases like `foo* bar*`
         # that make ` bar` italics in CommonMark don't actually do so in Discord
