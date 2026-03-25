@@ -148,8 +148,12 @@ class XKCDMentions(commands.Cog):
         # Footnotes start with an asterisk. This also filters out any Markdown syntax
         # such as `*foo*`, `**bar**`, or `some**thing**`. Other cases like `foo* bar*`
         # that make ` bar` italics in CommonMark don't actually do so in Discord
-        # Markdown, so those are fine to count.
-        has_footnote = any("*" in w.rstrip("*") for w in words)
+        # Markdown, so those are fine to count. Words consisting solely of asterisks are
+        # also ignored, as they are likely either asterisk corrections which have
+        # a space after the *, or Markdown bullet points.
+        has_footnote = any(
+            not (prefix := w.rstrip("*")) or "*" in prefix for w in words
+        )
         # A "mysterious asterisk", as defined by xkcd 2708, is an asterisk without
         # a matching footnote.
         return has_asterisk and not has_footnote
