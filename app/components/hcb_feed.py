@@ -109,7 +109,7 @@ class HCBFeed(commands.Cog):
 
         await config().hcb_feed_channel.send(embed=embed)
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=3)
     async def update_feed(self) -> None:
         if self.lock.locked():
             return
