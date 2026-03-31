@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, NamedTuple, final
 
 from githubkit.exception import RequestFailed
 
-from app.components.github_integration.models import GitHubUser
+from app.components.github_integration.models import GitHubUser, GitUser
 from app.config import gh
 
 if TYPE_CHECKING:
@@ -18,8 +18,8 @@ class CommitKey(NamedTuple):
 
 class CommitSummary(NamedTuple):
     sha: str
-    author: GitHubUser | None
-    committer: GitHubUser | None
+    author: GitHubUser | GitUser | None
+    committer: GitHubUser | GitUser | None
     message: str
     additions: int
     deletions: int
@@ -53,18 +53,31 @@ class CommitCache:
         except RequestFailed:
             return None
         obj = resp.parsed_data
+        commit = obj.commit
         stats = obj.stats or 0
         commit_summary = CommitSummary(
             sha=obj.sha,
-            author=GitHubUser(**a.model_dump()) if (a := obj.author) else None,
-            committer=GitHubUser(**c.model_dump()) if (c := obj.committer) else None,
-            message=obj.commit.message,
+            author=(
+                GitHubUser(**obj.author.model_dump())
+                if obj.author
+                else GitUser(name=commit.author.name)
+                if commit.author and commit.author.name
+                else None
+            ),
+            committer=(
+                GitHubUser(**obj.committer.model_dump())
+                if obj.committer
+                else GitUser(name=commit.committer.name)
+                if commit.committer and commit.committer.name
+                else None
+            ),
+            message=commit.message,
             additions=stats and (stats.additions or 0),
             deletions=stats and (stats.deletions or 0),
             files_changed=len(obj.files or ()),
             url=obj.html_url,
-            date=(c := obj.commit.committer) and (c.date or None),
-            signed=bool((v := obj.commit.verification) and v.verified),
+            date=(c := commit.committer) and (c.date or None),
+            signed=bool((v := commit.verification) and v.verified),
         )
         key_with_full_sha = copy.replace(key, sha=obj.sha)
         self._cache[key_with_full_sha] = commit_summary

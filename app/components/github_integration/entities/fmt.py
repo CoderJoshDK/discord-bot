@@ -66,7 +66,7 @@ def _format_entity_detail(entity: Entity) -> str:
     elif isinstance(entity, Discussion):
         if not entity.answered_by:
             return ""
-        body = f"answered by {entity.answered_by.hyperlink}"
+        body = f"answered by {entity.answered_by.format()}"
     else:
         msg = f"Unknown entity type: {type(entity)}"
         raise TypeError(msg)
@@ -79,7 +79,7 @@ def _format_mention(entity: Entity) -> str:
     owner, name = entity.owner, entity.repo_name
     fmt_ts = partial(dynamic_timestamp, entity.created_at)
     subtext = (
-        f"-# by {entity.user.hyperlink}"
+        f"-# by {entity.user.format()}"
         f" in [`{owner}/{name}`](<https://github.com/{owner}/{name}>)"
         f" on {fmt_ts('D')} ({fmt_ts('R')})\n"
     )

@@ -279,7 +279,7 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
         await send_embed(
             event.sender,
             pr_embed_content(
-                pr, "dismissed a review of {}", f"authored by {review_author.hyperlink}"
+                pr, "dismissed a review of {}", f"authored by {review_author.format()}"
             ),
             pr_footer(pr, emoji=emoji),
             color="orange",
@@ -324,5 +324,5 @@ def _format_reviewer(event: Any) -> str:
     if hasattr(event, "requested_team"):
         return f"the `{event.requested_team.name}` team"
     if requested_reviewer := getattr(event, "requested_reviewer", None):
-        return GitHubUser(**requested_reviewer.model_dump()).hyperlink
+        return GitHubUser(**requested_reviewer.model_dump()).format()
     return "`?`"

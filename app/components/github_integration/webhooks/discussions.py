@@ -136,7 +136,7 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:
         discussion = event.discussion
         if answering_user := event.answer.user:
             gh_user = GitHubUser(**answering_user.model_dump())
-            body = f"-# Answer by {gh_user.hyperlink}"
+            body = f"-# Answer by {gh_user.format()}"
         else:
             body = None
         await send_embed(

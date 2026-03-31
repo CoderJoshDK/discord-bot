@@ -37,8 +37,7 @@ class GitHubUser(BaseModel):
     url: str = Field(validation_alias=AliasChoices("html_url", "url"))
     icon_url: str = Field(validation_alias=AliasChoices("icon_url", "avatar_url"))
 
-    @property
-    def hyperlink(self) -> str:
+    def format(self) -> str:
         return f"[`{self.name}`](<{self.url}>)"
 
     @classmethod
@@ -48,6 +47,13 @@ class GitHubUser(BaseModel):
             url="https://github.com",
             icon_url="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
         )
+
+
+class GitUser(NamedTuple):
+    name: str
+
+    def format(self) -> str:
+        return f"`{self.name}`"
 
 
 class Reactions(BaseModel):

@@ -11,6 +11,7 @@ from discord.ext import commands
 from app.bot import emojis
 from app.components.github_integration.commit_types import CommitKey, commit_cache
 from app.components.github_integration.entities.resolution import resolve_repo_signature
+from app.components.github_integration.models import GitHubUser
 from toolbox.discord import (
     dynamic_timestamp,
     suppress_embeds_after_delay,
@@ -70,7 +71,10 @@ class CommitLinks(commands.Cog):
         title = commit.message.splitlines()[0]
         heading = f"{emoji} **Commit [`{commit.sha[:7]}`](<{commit.url}>):** {title}"
 
-        if commit.committer and commit.committer.name == "web-flow":
+        if (
+            isinstance(commit.committer, GitHubUser)
+            and commit.committer.name == "web-flow"
+        ):
             # `web-flow` is GitHub's committer account for all web commits (like merge
             # or revert) made on GitHub.com, so let's pretend the commit author is
             # actually the committer.
@@ -78,12 +82,12 @@ class CommitLinks(commands.Cog):
 
         subtext = "\n-# authored by "
         if (a := commit.author) and (c := commit.committer) and a.name != c.name:
-            subtext += f"{commit.author.hyperlink}, committed by "
+            subtext += f"{commit.author.format()}, committed by "
 
         if commit.signed:
             subtext += "🔏 "
 
-        subtext += commit.committer.hyperlink if commit.committer else "an unknown user"
+        subtext += commit.committer.format() if commit.committer else "an unknown user"
 
         repo_url = commit.url.rstrip(string.hexdigits).removesuffix("/commit/")
         _, owner, name = repo_url.rsplit("/", 2)
