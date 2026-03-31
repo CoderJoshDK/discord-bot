@@ -117,7 +117,7 @@ class HCBFeed(commands.Cog):
             assert self.org
             logger.debug("updating HCB feed")
             resp = await self.org.async_get_transactions(expand="donation")
-            txns = {txn.id: txn for txn in resp}
+            txns = {txn.id: txn for txn in resp if txn.pending is False}
 
             old_txns = set(self.history_file.read_text().strip().split(","))
             if not (new_txns := txns.keys() - old_txns):
