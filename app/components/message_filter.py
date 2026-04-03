@@ -40,13 +40,13 @@ class MessageFilter(commands.Cog):
         self.message_filters = (
             # Delete non-image messages in #showcase
             MessageFilterTuple(
-                config().showcase_channel_id,
+                config().channel_ids.showcase,
                 lambda msg: cast("dc.Message", msg).attachments,
                 ("any attachments", "a screenshot or a video"),
             ),
             # Delete non-link messages in #media
             MessageFilterTuple(
-                config().media_channel_id,
+                config().channel_ids.media,
                 lambda msg: URL_REGEX.search(cast("dc.Message", msg).content),
                 ("a link", "a link"),
             ),

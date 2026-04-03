@@ -111,7 +111,7 @@ class HCBFeed(commands.Cog):
             embed.set_author(name=name, icon_url=summary.sender_avatar_url)
         embed.set_footer(text=f"ID: {txn.id}{timestamp}")
 
-        await config().hcb_feed_channel.send(embed=embed)
+        await config().channels.hcb_feed.send(embed=embed)
 
     @tasks.loop(minutes=3)
     async def update_feed(self) -> None:

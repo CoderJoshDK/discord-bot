@@ -1,12 +1,16 @@
+import tomllib
+from pathlib import Path
 from tempfile import gettempdir
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
+
+import discord as dc
 
 from app.config import Config, config_var
 
 if TYPE_CHECKING:
     from contextvars import Token
 
-    from app.bot import GhosttyBot
+ROOT = Path(__file__).parents[2]
 
 
 def config() -> Token[Config]:
@@ -16,7 +20,11 @@ def config() -> Token[Config]:
         with config():
             ...
     """
-    # NOTE: stub out the functions on `bot` as needed (with SimpleNamespace) for
-    # execution of the tests.
-    bot = cast("GhosttyBot", object())
-    return config_var.set(Config(".env.example", data_dir=gettempdir(), bot=bot))
+    cfg = tomllib.loads((ROOT / "config-example.toml").read_text())
+    cfg["data_dir"] = gettempdir()
+
+    bot = dc.Client(intents=dc.Intents.none())
+
+    Config.model_config["cli_parse_args"] = False
+    Config.model_config["env_prefix"] = "="  # invalid env var name char
+    return config_var.set(Config(**cfg, bot=bot))

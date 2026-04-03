@@ -28,7 +28,7 @@ class LockOldPosts(commands.Cog):
             message.author.bot
             or not isinstance(post, dc.Thread)
             or not post.parent
-            or post.parent.id != config().help_channel_id
+            or post.parent.id != config().channel_ids.help
             or post.locked
             or post.last_message_id is None
             or not post_is_solved(post)

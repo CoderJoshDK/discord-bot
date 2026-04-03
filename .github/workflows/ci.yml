@@ -33,7 +33,7 @@ jobs:
 
       - name: taplo (TOML formatting)
         if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
-        run: uv run taplo fmt --check --diff pyproject.toml packages/*/pyproject.toml
+        run: uv run taplo fmt --check --diff pyproject.toml packages/*/pyproject.toml config-example.toml
       - name: ruff format (Python formatting)
         if: ${{ !cancelled() && steps.sync.conclusion == 'success' }}
         run: uv run ruff format --diff
