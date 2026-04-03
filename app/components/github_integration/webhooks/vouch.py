@@ -55,7 +55,9 @@ def register_vouch_command(
         else event.discussion.number
     )
     logger.info(
-        "ignoring vouch system comment from @{} in #{}", event.sender.login, number
+        "ignoring vouch system comment from @{user} in #{entity_id}",
+        user=event.sender.login,
+        entity_id=number,
     )
     vouch_queue[event.comment.id] = VouchQueueEntry(command, event.sender, footer)
 

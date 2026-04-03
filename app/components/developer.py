@@ -41,8 +41,8 @@ class Developer(commands.Cog):
 
         if not config().is_ghostty_mod(message.author):
             logger.debug(
-                "!sync called by {} who is not a mod",
-                pretty_print_account(message.author),
+                "!sync called by {user} who is not a mod",
+                user=pretty_print_account(message.author),
             )
             return
 

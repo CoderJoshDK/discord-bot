@@ -57,13 +57,17 @@ def is_dm(account: Account) -> TypeIs[dc.User]:
 async def try_dm(account: Account, content: str, **extras: Any) -> None:
     if account.bot:
         logger.warning(
-            "attempted to DM {}, who is a bot", pretty_print_account(account)
+            "attempted to DM {user}, who is a bot", user=pretty_print_account(account)
         )
         return
     try:
         await account.send(content, **extras)
     except dc.Forbidden:
-        logger.error("failed to DM {} with: {}", account, shorten(content, width=50))
+        logger.error(
+            "failed to DM {user} with: {content}",
+            user=account,
+            content=shorten(content, width=50),
+        )
 
 
 def post_has_tag(post: dc.Thread, substring: str) -> bool:
@@ -98,10 +102,12 @@ def escape_special(content: str) -> str:
 
 
 async def suppress_embeds_after_delay(message: dc.Message, delay: float = 5.0) -> None:
-    logger.trace("waiting {}s to suppress embeds of {}", delay, message)
+    logger.trace(
+        "waiting {delay}s to suppress embeds of {msg}", delay=delay, msg=message
+    )
     await asyncio.sleep(delay)
     with safe_edit:
-        logger.debug("suppressing embeds of {}", message)
+        logger.debug("suppressing embeds of {msg}", msg=message)
         await message.edit(suppress=True)
 
 

@@ -30,7 +30,10 @@ def register_internal_hooks(webhook: Monalisten) -> None:
     async def auth_issue(issue: AuthIssue) -> None:
         guid = issue.payload.get("x-github-delivery", "<missing-guid>")
         logger.warning(
-            "token {} in event {}: {}", issue.kind.value, guid, issue.payload
+            "token {kind} in event {guid}: {payload}",
+            kind=issue.kind.value,
+            guid=guid,
+            payload=issue.payload,
         )
 
     @webhook.internal.ready

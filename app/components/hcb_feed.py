@@ -32,7 +32,7 @@ class TransactionSummary(NamedTuple):
     @classmethod
     def from_transaction(cls, txn: hcb.Transaction) -> Self | None:
         if txn.type is None:
-            logger.error("missing transaction type for {}", txn.id)
+            logger.error("missing transaction type for {txn}", txn=txn.id)
             return None
         kind = txn.type.replace("_", " ").capitalize()
         memo = txn.memo
@@ -95,8 +95,8 @@ class HCBFeed(commands.Cog):
     async def publish_transaction(self, txn: hcb.Transaction) -> None:
         if not (summary := TransactionSummary.from_transaction(txn)):
             logger.warning(
-                "failed to create a summary; transaction {!r} will not be published",
-                txn.id,
+                "failed to create a summary; transaction {txn!r} will not be published",
+                txn=txn.id,
             )
             return
 
@@ -129,7 +129,9 @@ class HCBFeed(commands.Cog):
                 return
 
             logger.info(
-                "found {} new transactions: {}", len(new_txns), ", ".join(new_txns)
+                "found {txn_count} new transactions: {txn_ids}",
+                txn_count=len(new_txns),
+                txn_ids=", ".join(new_txns),
             )
             for txn in sorted(new_txns, key=lambda k: date_sort_key(txns[k])):
                 await self.publish_transaction(txns[txn])

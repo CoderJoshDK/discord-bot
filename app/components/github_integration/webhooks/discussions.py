@@ -74,19 +74,20 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:
     @webhook.event.discussion
     async def log_event(event: events.Discussion) -> None:
         logger.info(
-            "received event {!r} for discussion #{} from {}",
-            event.action,
-            event.discussion.number,
-            format_event_sender(event.sender),
+            "received event {action!r} for discussion #{discussion} from {user}",
+            action=event.action,
+            discussion=event.discussion.number,
+            user=format_event_sender(event.sender),
         )
 
     @webhook.event.discussion_comment
     async def log_comment_event(event: events.DiscussionComment) -> None:
         logger.info(
-            "received a 'comment {}' event for discussion #{} from {}",
-            event.action,
-            event.discussion.number,
-            format_event_sender(event.sender),
+            "received a 'comment {action}' event for "
+            "discussion #{discussion} from {user}",
+            action=event.action,
+            discussion=event.discussion.number,
+            user=format_event_sender(event.sender),
         )
 
     @webhook.event.discussion.created
@@ -108,7 +109,9 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:
             discussion.state_reason
             and (color := DISCUSSION_STATE_COLORS.get(discussion.state_reason))
         ):
-            logger.warning("unexpected state reason: {}", discussion.state_reason)
+            logger.warning(
+                "unexpected state reason: {reason}", reason=discussion.state_reason
+            )
             return
 
         reason = discussion.state_reason.replace("_", " ")

@@ -57,7 +57,7 @@ def setup() -> None:
     logger.add(sys.stderr, level=primary_level.upper(), filter=default_filter | filters)  # pyright: ignore[reportArgumentType, reportCallIssue]
     if filters:
         filters_str = " ".join(f"{f}={lvl}" for f, lvl in filters.items())
-        logger.info("using log filters {}", filters_str)
+        logger.info("using log filters {filters}", filters=filters_str)
 
 
 # This function cannot be done alongside setup(), as the sentry_dsn is only known after

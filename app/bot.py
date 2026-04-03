@@ -93,7 +93,7 @@ class GhosttyBot(commands.Bot):
     @override
     async def load_extension(self, name: str, *, package: str | None = None) -> None:
         short_name = name.removeprefix("app.components.")
-        logger.debug("loading extension {}", short_name)
+        logger.debug("loading extension {name}", name=short_name)
         with sentry_sdk.start_span(op="bot.load_extension", name=short_name):
             await super().load_extension(name, package=package)
 
@@ -141,12 +141,12 @@ class GhosttyBot(commands.Bot):
             async with asyncio.TaskGroup() as group:
                 for extension in self.get_component_extension_names():
                     group.create_task(self.load_extension(extension))
-        logger.info("loaded {} extensions", len(self.extensions))
+        logger.info("loaded {ext_count} extensions", ext_count=len(self.extensions))
 
     async def on_ready(self) -> None:
         self.bot_status.last_login_time = dt.datetime.now(tz=dt.UTC)
         await self.load_emojis()
-        logger.info("logged in as {}", self.user)
+        logger.info("logged in as {user}", user=self.user)
 
     def _fails_message_filters(self, message: dc.Message) -> bool:
         # This can't be the MessageFilter cog type because that would cause an import
@@ -161,7 +161,9 @@ class GhosttyBot(commands.Bot):
 
         # Simple test
         if message.guild is None and message.content == "ping":
-            logger.debug("ping sent by {}", pretty_print_account(message.author))
+            logger.debug(
+                "ping sent by {user}", user=pretty_print_account(message.author)
+            )
             await try_dm(message.author, "pong")
             return
 
@@ -198,6 +200,6 @@ class GhosttyBot(commands.Bot):
             k for k, v in self._emojis.items() if v != "❓"
         }:
             emoji_list = ", ".join(missing_emojis)
-            logger.error("failed to load emojis {}", emoji_list)
+            logger.error("failed to load emojis {emojis}", emojis=emoji_list)
 
         self.emojis_loaded.set()

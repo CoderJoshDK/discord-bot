@@ -30,7 +30,9 @@ class AcceptInvite(commands.Cog):
         )
         await interaction.response.send_message("Check your DMs!", ephemeral=True)
 
-        logger.debug("{} accepted the invite", pretty_print_account(interaction.user))
+        logger.debug(
+            "{user} accepted the invite", user=pretty_print_account(interaction.user)
+        )
         await config().channels.log.send(
             f"{interaction.user.mention} accepted the invite!",
             allowed_mentions=dc.AllowedMentions.none(),
