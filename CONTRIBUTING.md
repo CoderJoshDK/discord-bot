@@ -145,7 +145,6 @@ Create a `config.toml` file in the root of the project based on
 - `data_dir`: a directory path for persistent state
 - `tokens.discord`: the Discord bot token from
   [step 1](#1-creating-a-discord-application).
-- `github_org`: the GitHub organization name.
 - `tokens.github`: the GitHub token from [step 2](#2-getting-a-github-token).
 - `sentry_dsn`: the Sentry DSN (optional).
 - Webhook environment variables from [step 3](#3-creating-a-github-webhook) (if

@@ -98,7 +98,7 @@ class Docs(commands.Cog):
     async def _get_file(self, path: str) -> str:
         return (
             await gh().rest.repos.async_get_content(
-                config().github_org,
+                "ghostty-org",
                 "website",
                 path,
                 headers={"Accept": "application/vnd.github.raw+json"},

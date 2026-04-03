@@ -115,7 +115,6 @@ class Config(BaseSettings):
     bot: CliSuppress[dc.Client]
     accept_invite_url: str
     guild_id: int | None = None
-    github_org: str
     data_dir: DirectoryPath
     sentry_dsn: SecretStr | None = None
 

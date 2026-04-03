@@ -1,7 +1,6 @@
 # HINT: don't forget to also update CONTRIBUTING.md and app/config.py!
 
 data_dir = "data"
-github_org = "ghostty-org"
 accept_invite_url = "https://github.com/ghostty-org"
 guild_id = 1005603569187160125
 sentry_dsn = "abcd"
