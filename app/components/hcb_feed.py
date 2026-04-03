@@ -56,8 +56,12 @@ class TransactionSummary(NamedTuple):
             ):
                 if txn.type == "ach_transfer":
                     kind = "ACH transfer"
-                assert txn.user
-                user = txn.user.full_name, txn.user.photo
+                if txn.user:
+                    user = (txn.user.full_name, txn.user.photo)
+                elif (txn.amount_cents or 0) < 0:
+                    user = ORG_USER
+                else:
+                    user = (None, None)
             case "donation":
                 don = txn.donation
                 assert don
