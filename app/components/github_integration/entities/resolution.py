@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, final, override
 from githubkit.exception import RequestFailed
 from zig_codeblocks import extract_codeblocks
 
-from app.config import REPO_ALIASES, config, gh
+from app.config import REPO_ALIASES, gh
 from toolbox.cache import TTRCache
 
 if TYPE_CHECKING:
@@ -60,10 +60,10 @@ async def resolve_repo_signature(
     match owner, repo:
         case None, None:
             # The Ghostty repo
-            return config().github_org, "ghostty"
+            return "ghostty-org", "ghostty"
         case None, repo if repo in REPO_ALIASES:
             # Special ghostty-org prefixes
-            return config().github_org, REPO_ALIASES[repo]
+            return "ghostty-org", REPO_ALIASES[repo]
         case None, repo:
             # Only a name provided
             if repo_owner := await owner_cache.get(repo):
