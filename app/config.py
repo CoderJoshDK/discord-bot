@@ -163,9 +163,9 @@ class Config(BaseSettings):
         guild = self.bot.guilds[0]
         logger.info(
             "BOT_GUILD_ID unset or specified guild not found; using bot's first guild: "
-            "{} (ID: {})",
-            guild.name,
-            guild.id,
+            "{name} (ID: {id})",
+            name=guild.name,
+            id=guild.id,
         )
         return guild
 

@@ -72,28 +72,28 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
     @webhook.event.pull_request
     async def log_event(event: events.PullRequest) -> None:
         logger.info(
-            "received event {!r} for PR #{} from {}",
-            event.action,
-            event.pull_request.number,
-            format_event_sender(event.sender),
+            "received event {action!r} for PR #{pr} from {user}",
+            action=event.action,
+            pr=event.pull_request.number,
+            user=format_event_sender(event.sender),
         )
 
     @webhook.event.pull_request_review
     async def log_review_event(event: events.PullRequestReview) -> None:
         logger.info(
-            "received a 'review {}' event for PR #{} from {}",
-            event.action,
-            event.pull_request.number,
-            format_event_sender(event.sender),
+            "received a 'review {action}' event for PR #{pr} from {user}",
+            action=event.action,
+            pr=event.pull_request.number,
+            user=format_event_sender(event.sender),
         )
 
     @webhook.event.pull_request_review_comment
     async def log_review_comment_event(event: events.PullRequestReviewComment) -> None:
         logger.info(
-            "received a 'review comment {}' event for PR #{} from {}",
-            event.action,
-            event.pull_request.number,
-            format_event_sender(event.sender),
+            "received a 'review comment {action}' event for PR #{pr} from {user}",
+            action=event.action,
+            pr=event.pull_request.number,
+            user=format_event_sender(event.sender),
         )
 
     @webhook.event.pull_request.opened
@@ -101,9 +101,9 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
         pr = event.pull_request
         if is_vouch_pr(event):
             logger.info(
-                "ignoring vouch system PR #{} opened by @{}",
-                pr.number,
-                event.sender.login,
+                "ignoring vouch system PR #{pr} opened by @{user}",
+                pr=pr.number,
+                user=event.sender.login,
             )
             return
 
@@ -121,15 +121,15 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
         action, color = ("merged", "purple") if pr.merged else ("closed", "red")
         if action == "merged" and is_vouch_pr(event):
             if not (vouch_details := extract_vouch_details(pr.body)):
-                logger.error("failed to extract vouch data from PR #{}", pr.number)
+                logger.error("failed to extract vouch data from PR #{pr}", pr=pr.number)
                 return
 
             url, entity_id, comment_id, vouchee = vouch_details
             if comment_id not in vouch_queue:
                 logger.error(
-                    "missing vouch queue entry for comment {} in #{}",
-                    comment_id,
-                    entity_id,
+                    "missing vouch queue entry for comment {comment} in #{entity}",
+                    comment=comment_id,
+                    entity=entity_id,
                 )
                 return
 
@@ -251,7 +251,7 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
             case "changes_requested":
                 color, title = "red", "requested changes in"
             case s:
-                logger.warning("unexpected review state: {}", s)
+                logger.warning("unexpected review state: {state}", state=s)
                 return
 
         emoji = "pull_" + (

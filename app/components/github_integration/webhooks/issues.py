@@ -73,19 +73,19 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
     @webhook.event.issues
     async def log_event(event: events.Issues) -> None:
         logger.info(
-            "received event {!r} for issue #{} from {}",
-            event.action,
-            event.issue.number,
-            format_event_sender(event.sender),
+            "received event {action!r} for issue #{issue} from {user}",
+            action=event.action,
+            issue=event.issue.number,
+            user=format_event_sender(event.sender),
         )
 
     @webhook.event.issue_comment
     async def log_comment_event(event: events.IssueComment) -> None:
         logger.info(
-            "received a 'comment {}'' event for issue #{} from {}",
-            event.action,
-            event.issue.number,
-            format_event_sender(event.sender),
+            "received a 'comment {action}' event for issue #{issue} from {user}",
+            action=event.action,
+            issue=event.issue.number,
+            user=format_event_sender(event.sender),
         )
 
     @webhook.event.issues.opened
@@ -109,7 +109,9 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
             case "not_planned" | "duplicate":
                 color, emoji_kind = "gray", "unplanned"
             case _:
-                logger.warning("unexpected state reason: {}", issue.state_reason)
+                logger.warning(
+                    "unexpected state reason: {reason}", reason=issue.state_reason
+                )
                 return
 
         reason = issue.state_reason.replace("_", " ")

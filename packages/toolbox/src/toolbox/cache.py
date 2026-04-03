@@ -35,13 +35,15 @@ class TTRCache[KT, VT](ABC):
             for key, (timestamp, _) in self._cache.items()
             if now - timestamp >= self._ttr
         }:
-            logger.debug("dropping expired {} key {!r}", cache_name, key)
+            logger.debug(
+                "dropping expired {cache} key {key!r}", cache=cache_name, key=key
+            )
             del self._cache[key]
 
     async def get(self, key: KT) -> VT | None:
         self._prune_expired_keys()
         if key not in self:
-            logger.debug("{} not in cache; fetching", key)
+            logger.debug("{key} not in cache; fetching", key=key)
             await self.fetch(key)
         try:
             _, value = self[key]

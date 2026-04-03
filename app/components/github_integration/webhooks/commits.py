@@ -22,9 +22,9 @@ def register_hooks(webhook: Monalisten) -> None:
         full_sha = event.comment.commit_id
         sha = full_sha[:7]
         logger.info(
-            "received a commit comment event for commit {!r} from {}",
-            sha,
-            format_event_sender(event.sender),
+            "received a commit comment event for commit {sha!r} from {user}",
+            sha=sha,
+            user=format_event_sender(event.sender),
         )
 
         owner, _, repo_name = event.repository.full_name.partition("/")
@@ -33,7 +33,7 @@ def register_hooks(webhook: Monalisten) -> None:
         ):
             commit_title = commit_summary.message.splitlines()[0]
         else:
-            logger.warning("no commit summary found for {}", full_sha)
+            logger.warning("no commit summary found for {sha}", sha=full_sha)
             commit_title = "(no commit message found)"
 
         await send_embed(
