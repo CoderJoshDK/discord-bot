@@ -174,4 +174,4 @@ async def send_embed(  # noqa: PLR0913
         .set_footer(**footer.dict)
         .set_author(**author.model_dump())
     )
-    await config().webhook_channels[feed_type].send(embed=embed)
+    await config().webhook.channels[feed_type].send(embed=embed)

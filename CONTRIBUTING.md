@@ -8,8 +8,9 @@
   - [2. Getting a GitHub token](#2-getting-a-github-token)
   - [3. Creating a GitHub webhook](#3-creating-a-github-webhook)
   - [4. Preparing a Discord server](#4-preparing-a-discord-server)
-  - [5. Preparing the `.env` file](#5-preparing-the-env-file)
+  - [5. Preparing the config file](#5-preparing-the-config-file)
     - [5.1. Serious channels](#51-serious-channels)
+    - [5.2. Config overrides](#52-config-overrides)
   - [6. Running the bot](#6-running-the-bot)
 - [Project structure](#project-structure)
 
@@ -121,38 +122,38 @@ permission):
 - `mod`
 - `helper`
 
-## 5. Preparing the `.env` file
+## 5. Preparing the config file
 
-Create a `.env` file in the root of the project based on `.env.example`. Below
-are explanations for each variable:
+Create a `config.toml` file in the root of the project based on
+`config-example.toml`. Below are explanations for all fields variable:
 
-- `BOT_ACCEPT_INVITE_URL`: a URL to visit to accept the Ghostty invite
+- `accept_invite_url`: a URL to visit to accept the Ghostty invite
 - Channel/role IDs from [step 4](#4-preparing-a-discord-server):
-  - `BOT_GUILD_ID`: the id of the server you prepared (optional; useful when
-    your bot is in multiple servers).
-  - `BOT_HCB_FEED_CHANNEL_ID`
-  - `BOT_HELP_CHANNEL_ID`
-  - `BOT_HELP_CHANNEL_TAG_IDS`: a comma-separated list of `tag_name:tag_id`
-    pairs. The tag names are `moved`, `solved`, `stale` and `duplicate`.
-  - `BOT_MEDIA_CHANNEL_ID`
-  - `BOT_SHOWCASE_CHANNEL_ID`
-  - `BOT_LOG_CHANNEL_ID`
-  - `BOT_WEBHOOK_CHANNEL_IDS`: a comma-separated list of `feed_type:channel_id`
-    pairs. The feed type names are `main` and `discussions`.
-  - `BOT_SERIOUS_CHANNEL_IDS`: a comma-separated list of channel ids to disable
-    "fun" features in. See the guidelines below on which channels to include.
-  - `BOT_MOD_ROLE_ID`
-  - `BOT_HELPER_ROLE_ID`
-- `BOT_DATA_DIR`: a directory path for persistent state
-- `BOT_TOKEN`: the Discord bot token from
+  - `guild_id`: the id of the server you prepared (optional; useful when your
+    bot is in multiple servers).
+  - `channels.hcb_feed`
+  - `channels.help`
+  - `channels.help_tags`: a table of `tag_name` → `tag_id` pairs. The tag names
+    are `moved`, `solved`, `stale` and `duplicate`.
+  - `channels.media`
+  - `channels.showcase`
+  - `channels.log` pairs. The feed type names are `main` and `discussions`.
+  - `channels.serious`: a comma-separated list of channel ids to disable "fun"
+    features in. See the guidelines below on which channels to include.
+  - `roles.mod`
+  - `roles.helper`
+- `data_dir`: a directory path for persistent state
+- `tokens.discord`: the Discord bot token from
   [step 1](#1-creating-a-discord-application).
-- `BOT_GITHUB_ORG`: the GitHub organization name.
-- `BOT_GITHUB_TOKEN`: the GitHub token from [step 2](#2-getting-a-github-token).
-- `BOT_SENTRY_DSN`: the Sentry DSN (optional).
+- `github_org`: the GitHub organization name.
+- `tokens.github`: the GitHub token from [step 2](#2-getting-a-github-token).
+- `sentry_dsn`: the Sentry DSN (optional).
 - Webhook environment variables from [step 3](#3-creating-a-github-webhook) (if
-  you skipped that section, you can use the dummy values from `.env.example`):
-  - `BOT_GITHUB_WEBHOOK_URL`: the URL to receive events from.
-  - `BOT_GITHUB_WEBHOOK_SECRET`: a token for validating events (optional).
+  you skipped that section, you can use the dummy values from
+  `config-example.toml`):
+  - `webhook.url`: the URL to receive events from.
+  - `webhook.secret`: a token for validating events (optional).
+  - `webhook.channels`: a table of `feed_type` → `channel_id` pairs.
 
 ### 5.1 Serious channels
 
@@ -173,6 +174,27 @@ serious channels:
   **should** be added to the serious channel list. You should probably leave a
   channel or two off the serious channel list, should you want to modify any of
   the fun features above.
+
+### 5.2. Config overrides
+
+`.env` files are also supported, although they have a lower priority than the
+TOML file.
+
+For temporary changes, you can set environment variables in the command-line or
+use the CLI interface available under `uv run -m app --help`.
+
+Since the TOML config has a nested structure, the environment variable names
+indicate nesting with a double underscore, e.g. overriding `roles.mod` would be
+done with the `BOT__ROLES__MOD` variable, and overriding `channels.help_tags`
+would be done with the `BOT__CHANNELS__HELP_TAGS` variable.
+
+The complete priority is, in decreasing order:
+
+1. CLI arguments
+2. Environment variables
+3. `__init__` arguments
+4. `.toml` config
+5. `.env` files
 
 ## 6. Running the bot
 
@@ -206,7 +228,7 @@ This bot runs on Python 3.14+ and is managed with [uv]. To get started:
       formatted uniformly, so first run the formatters:
 
       ```sh
-      uv run taplo fmt pyproject.toml packages/*/pyproject.toml
+      uv run taplo fmt pyproject.toml packages/*/pyproject.toml config-example.toml
       uv run ruff format
       uv run mdformat --number --wrap 80 *.md
       ```
@@ -282,7 +304,7 @@ bot --> components
 - `bot.py` contains custom attributes and behaviors for the overall Discord bot
   and then loads extensions found in `components`.
 - `config.py` handles reading and parsing the environment variables and the
-  local `.env` file, and creates the GitHub client.
+  local `config.toml` file, and creates the GitHub client.
 - `log.py` sets up logging and optionally Sentry.
 - `__main__.py` initializes logging and starts the bot.
 

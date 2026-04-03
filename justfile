@@ -10,7 +10,7 @@ check:
     @just check-package packages/toolbox
     uv run basedpyright app tests
     uv run pytest -p terminalprogress tests
-    uv run taplo fmt --check --diff pyproject.toml
+    uv run taplo fmt --check --diff pyproject.toml config-example.toml
     uv run ruff format --check
     uv run mdformat --number --wrap 80 --check *.md
 
@@ -18,11 +18,11 @@ check:
 check-package pkg:
     cd {{pkg}} && uv run basedpyright src tests
     cd {{pkg}} && uv run pytest -p terminalprogress tests
-    cd {{pkg}} && uv run taplo fmt --check --diff pyproject.toml
+    cd {{pkg}} && uv run taplo fmt --check --diff pyproject.toml config-example.toml
 
 # Run taplo, ruff's formatter, and ruff's isort rules in fix mode
 format:
-    uv run taplo fmt pyproject.toml packages/*/pyproject.toml
+    uv run taplo fmt pyproject.toml packages/*/pyproject.toml config-example.toml
     uv run ruff format
     uv run ruff check --select I,RUF022,RUF023 --fix
     uv run mdformat --number --wrap 80 *.md

@@ -44,7 +44,7 @@ class Close(commands.GroupCog, group_name="close"):
         user = interaction.user
         if is_dm(user) or not (
             isinstance((post := interaction.channel), dc.Thread)
-            and post.parent_id == config().help_channel_id
+            and post.parent_id == config().channel_ids.help
         ):
             # Can only close posts in #help
             return False
@@ -73,7 +73,7 @@ class Close(commands.GroupCog, group_name="close"):
             raise error
         # Triggers if self.interaction_check fails
         await interaction.response.send_message(
-            f"This command can only be used in {config().help_channel.mention} posts, "
+            f"This command can only be used in {config().channels.help.mention} posts, "
             "by helpers or the post's author.",
             ephemeral=True,
         )
@@ -173,12 +173,12 @@ class Close(commands.GroupCog, group_name="close"):
         post = interaction.channel
 
         assert isinstance(post, dc.Thread)
-        assert post.parent_id == config().help_channel_id
+        assert post.parent_id == config().channel_ids.help
 
         help_tags = {
             tag
             for tag in cast("dc.ForumChannel", post.parent).available_tags
-            if tag.id in config().help_channel_tag_ids.values()
+            if tag.id in config().channel_ids.help_tags.values()
         }
 
         if set(post.applied_tags) & help_tags:
@@ -189,7 +189,7 @@ class Close(commands.GroupCog, group_name="close"):
 
         await interaction.response.defer(ephemeral=True)
 
-        desired_tag_id = config().help_channel_tag_ids[tag]
+        desired_tag_id = config().channel_ids.help_tags[tag]
         await post.add_tags(next(tag for tag in help_tags if tag.id == desired_tag_id))
 
         if title_prefix is None:

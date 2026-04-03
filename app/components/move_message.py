@@ -236,7 +236,7 @@ class HelpPostTitle(SafeModal, title="Turn into #help post"):
     async def on_submit(self, interaction: dc.Interaction) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)
 
-        webhook = await get_or_create_webhook(config().help_channel)
+        webhook = await get_or_create_webhook(config().channels.help)
         msg = await move_message(
             self.bot,
             webhook,
@@ -790,7 +790,7 @@ class MoveMessage(commands.Cog):
         if not message_can_be_moved(message):
             await interaction.response.send_message(
                 "System messages cannot be turned into "
-                f"{config().help_channel.mention} posts.",
+                f"{config().channels.help.mention} posts.",
                 ephemeral=True,
                 view=DeleteInstead(message),
             )

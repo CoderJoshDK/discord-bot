@@ -2,16 +2,29 @@
 
 from contextvars import ContextVar
 from functools import cached_property
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal, NamedTuple, override
 
 import discord as dc
 from githubkit import GitHub, TokenAuthStrategy
 from loguru import logger
-from pydantic import SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    DirectoryPath,
+    Field,
+    SecretStr,
+    TypeAdapter,
+)
+from pydantic_settings import (
+    BaseSettings,
+    CliSuppress,
+    SettingsConfigDict,
+    TomlConfigSettingsSource,
+)
 
 if TYPE_CHECKING:
+    from pydantic_settings import PydanticBaseSettingsSource
+
     from toolbox.discord import Account
 
 type WebhookFeedType = Literal["main", "discussions"]
@@ -27,74 +40,128 @@ REPO_ALIASES = {
     "bot": "discord-bot",
     "bobr": "discord-bot",
 }
+ENV_PREFIX = "BOT__"
+
+
+def validate_type[T](obj: object, typ: type[T]) -> T:
+    adapter = TypeAdapter(typ, config={"arbitrary_types_allowed": True})
+    return adapter.validate_python(obj, strict=True)
+
+
+def _alias(name: str) -> AliasChoices:
+    return AliasChoices(name, ENV_PREFIX + name.upper())
+
+
+class ConfigRoles(BaseModel):
+    mod: int
+    helper: int
+
+
+class ConfigTokens(BaseModel):
+    discord: SecretStr
+    github: SecretStr
+
+
+class ConfigChannels(BaseModel):
+    hcb_feed: int
+    help: int
+    log: int
+    media: int
+    showcase: int
+    serious: list[int] = Field(default_factory=list)
+    help_tags: dict[str, int] = Field(default_factory=dict)
+
+
+class Channels(NamedTuple):
+    hcb_feed: dc.TextChannel
+    help: dc.ForumChannel
+    log: dc.TextChannel
+
+
+class WebhookChannels(BaseModel):
+    main: int
+    discussions: int
+
+
+class ConfigWebhook(BaseModel):
+    _bot: dc.Client
+    url: SecretStr
+    secret: SecretStr | None = None
+    channel_ids: Annotated[WebhookChannels, Field(alias="channels")]
+
+    @cached_property
+    def channels(self) -> dict[WebhookFeedType, dc.TextChannel]:
+        assert self._bot
+        channels = {
+            "main": self._bot.get_channel(self.channel_ids.main),
+            "discussions": self._bot.get_channel(self.channel_ids.discussions),
+        }
+        return validate_type(channels, dict[WebhookFeedType, dc.TextChannel])
 
 
 class Config(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="BOT_", enable_decoding=False)
+    model_config = SettingsConfigDict(
+        cli_prog_name="uv run -m app",
+        cli_avoid_json=True,
+        cli_hide_none_type=True,
+        cli_parse_args=True,
+        cli_kebab_case=True,
+        cli_use_class_docs_for_groups=True,
+        env_prefix=ENV_PREFIX,
+        env_nested_delimiter="__",
+        toml_file="config.toml",
+    )
 
-    def __init__(
-        self, env_file: str, *args: Any, bot: dc.Client, **kwargs: Any
-    ) -> None:
-        logger.info("loading config from {}", env_file)
-        self.model_config["env_file"] = env_file
-        super().__init__(*args, **kwargs)
-
-        self._bot = bot
-
-    token: SecretStr
-
-    github_org: str
-    github_token: SecretStr
-    github_webhook_url: SecretStr
-    github_webhook_secret: SecretStr | None = None
-
-    data_dir: Path
+    bot: CliSuppress[dc.Client]
     accept_invite_url: str
+    guild_id: int | None = None
+    github_org: str
+    data_dir: DirectoryPath
     sentry_dsn: SecretStr | None = None
 
-    help_channel_tag_ids: dict[str, int]
+    tokens: ConfigTokens
+    role_ids: Annotated[ConfigRoles, Field(validation_alias=_alias("roles"))]
+    channel_ids: Annotated[ConfigChannels, Field(validation_alias=_alias("channels"))]
+    webhook: ConfigWebhook
 
-    guild_id: int | None = None
-    hcb_feed_channel_id: int
-    help_channel_id: int
-    log_channel_id: int
-    media_channel_id: int
-    showcase_channel_id: int
-    serious_channel_ids: list[int]
-    webhook_channel_ids: dict[WebhookFeedType, int]
+    @override
+    def model_post_init(self, context: Any, /) -> None:
+        self.webhook._bot = self.bot  # noqa: SLF001  # pyright: ignore[reportPrivateUsage]
 
-    mod_role_id: int
-    helper_role_id: int
-
-    @field_validator("data_dir", mode="after")
     @classmethod
-    def resolve_data_dir_path(cls, data_dir: Path) -> Path:
-        data_dir = data_dir.expanduser().resolve()
-        if not data_dir.exists():
-            msg = f"data directory does not exist: {data_dir}"
-            raise FileNotFoundError(msg)
-        return data_dir
+    @override
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (
+            env_settings,
+            init_settings,
+            TomlConfigSettingsSource(settings_cls),
+            dotenv_settings,
+        )
 
-    @field_validator("serious_channel_ids", mode="before")
-    @classmethod
-    def parse_id_list(cls, value: str) -> list[int]:
-        return list(map(int, value.split(",")))
-
-    @field_validator("help_channel_tag_ids", "webhook_channel_ids", mode="before")
-    @classmethod
-    def parse_id_mapping(cls, value: str) -> dict[str, int]:
-        return {
-            name: int(id_)
-            for name, id_ in (pair.split(":") for pair in value.split(","))
-        }
+    @cached_property
+    def channels(self) -> Channels:
+        logger.debug("fetching channels: hcb-feed, help, log")
+        channels = (
+            self.bot.get_channel(self.channel_ids.hcb_feed),
+            self.bot.get_channel(self.channel_ids.help),
+            self.bot.get_channel(self.channel_ids.log),
+        )
+        return validate_type(channels, Channels)
 
     @cached_property
     def ghostty_guild(self) -> dc.Guild:
         logger.debug("fetching ghostty guild")
-        if (id_ := self.guild_id) and (guild := self._bot.get_guild(id_)):
+        if (id_ := self.guild_id) and (guild := self.bot.get_guild(id_)):
             logger.trace("found ghostty guild")
             return guild
-        guild = self._bot.guilds[0]
+        guild = self.bot.guilds[0]
         logger.info(
             "BOT_GUILD_ID unset or specified guild not found; using bot's first guild: "
             "{} (ID: {})",
@@ -103,52 +170,15 @@ class Config(BaseSettings):
         )
         return guild
 
-    @cached_property
-    def log_channel(self) -> dc.TextChannel:
-        logger.debug("fetching log channel")
-        channel = self._bot.get_channel(self.log_channel_id)
-        assert isinstance(channel, dc.TextChannel)
-        return channel
-
-    @cached_property
-    def hcb_feed_channel(self) -> dc.TextChannel:
-        logger.debug("fetching HCB feed channel")
-        channel = self._bot.get_channel(self.hcb_feed_channel_id)
-        assert isinstance(channel, dc.TextChannel)
-        return channel
-
-    @cached_property
-    def help_channel(self) -> dc.ForumChannel:
-        logger.debug("fetching help channel")
-        channel = self._bot.get_channel(self.help_channel_id)
-        assert isinstance(channel, dc.ForumChannel)
-        return channel
-
-    @cached_property
-    def webhook_channels(self) -> dict[WebhookFeedType, dc.TextChannel]:
-        channels: dict[WebhookFeedType, dc.TextChannel] = {}
-        for feed_type, id_ in self.webhook_channel_ids.items():
-            logger.debug("fetching {feed_type} webhook channel", feed_type)
-            channel = self.ghostty_guild.get_channel(id_)
-            if not isinstance(channel, dc.TextChannel):
-                msg = (
-                    "expected {} webhook channel to be a text channel"
-                    if channel
-                    else "failed to find {} webhook channel"
-                )
-                raise TypeError(msg.format(feed_type))
-            channels[feed_type] = channel
-        return channels
-
     def is_privileged(self, member: dc.Member) -> bool:
         return not (
-            member.get_role(self.mod_role_id) is None
-            and member.get_role(self.helper_role_id) is None
+            member.get_role(self.role_ids.mod) is None
+            and member.get_role(self.role_ids.helper) is None
         )
 
     def is_ghostty_mod(self, user: Account) -> bool:
         member = self.ghostty_guild.get_member(user.id)
-        return member is not None and member.get_role(self.mod_role_id) is not None
+        return member is not None and member.get_role(self.role_ids.mod) is not None
 
 
 config_var = ContextVar[Config]("config")

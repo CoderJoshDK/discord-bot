@@ -1,0 +1,43 @@
+# HINT: don't forget to also update CONTRIBUTING.md and app/config.py!
+
+data_dir = "data"
+github_org = "ghostty-org"
+accept_invite_url = "https://github.com/ghostty-org"
+guild_id = 1005603569187160125
+sentry_dsn = "abcd"
+
+[tokens]
+discord = "CdwafxF9MTRvxKKtXpeqKdI4qE.P5PKdC.ke2veU7KdecW5jxgTu-5fgCUssNlPAdNf3tsG7"
+github = "gho_WrRihf6P7ksVXolv0WLDe2oTFT8953Vxww8K"
+
+[roles]
+mod = 1245855561015099402
+helper = 1245855736495049483
+
+[channels]
+hcb_feed = 1369875910656414411
+help = 7635317444894061557
+log = 1305317411752042821
+media = 1245859287631622769
+showcase = 1245859287634524358
+serious = [
+  1432973487928374987,
+  124972847932874987,
+  1384732643928570984,
+  1237928421058320958,
+  1423763429768764923,
+]
+
+[channels.help_tags]
+moved = 8101333548117981934
+solved = 1910683006289466725
+stale = 4776007530863128542
+duplicate = 5313753553802740706
+
+[webhook]
+url = "https://smee.io/aBCDef1gHijKLM2N"
+secret = "foobar"
+
+[webhook.channels]
+main = 1246449239523604510
+discussions = 1334429137315502710
