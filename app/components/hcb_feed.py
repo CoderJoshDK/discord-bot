@@ -83,7 +83,6 @@ class HCBFeed(commands.Cog):
         self.lock = asyncio.Lock()
 
         self.history_file = config().data_dir / "hcb_feed"
-        self.history_file.touch()
 
         self.org = None
         self.update_feed.start()
@@ -123,16 +122,28 @@ class HCBFeed(commands.Cog):
             resp = await self.org.async_get_transactions(expand="donation")
             txns = {txn.id: txn for txn in resp if txn.pending is False}
 
-            old_txns = set(self.history_file.read_text().strip().split(","))
-            if not (new_txns := txns.keys() - old_txns):
-                logger.debug("no new transactions")
-                return
+            try:
+                old_txns = set(self.history_file.read_text().strip().split(","))
+                if not (new_txns := txns.keys() - old_txns):
+                    logger.debug("no new transactions")
+                    return
+            except FileNotFoundError:
+                # Ignore the new transactions and pretend they had already been sent, so
+                # as to avoid spamming 50 transactions when the history file is created
+                # for the first time.
+                logger.warning(
+                    "hcb feed history file not found; ignoring {txn_count} "
+                    "transactions for first run",
+                    txn_count=len(txns),
+                )
+                new_txns = set[str]()
 
-            logger.info(
-                "found {txn_count} new transactions: {txn_ids}",
-                txn_count=len(new_txns),
-                txn_ids=", ".join(new_txns),
-            )
+            if new_txns:
+                logger.info(
+                    "found {txn_count} new transactions: {txn_ids}",
+                    txn_count=len(new_txns),
+                    txn_ids=", ".join(new_txns),
+                )
             for txn in sorted(new_txns, key=lambda k: date_sort_key(txns[k])):
                 await self.publish_transaction(txns[txn])
             self.history_file.write_text(",".join(txns))
