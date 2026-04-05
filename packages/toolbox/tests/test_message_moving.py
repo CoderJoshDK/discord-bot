@@ -1,6 +1,7 @@
+# ruff: noqa: RUF001, RUF003 (because of `×`)
 # pyright: reportPrivateUsage=false
-from types import SimpleNamespace
-from typing import cast
+import datetime as dt
+import re
 from unittest.mock import Mock
 
 import discord as dc
@@ -8,10 +9,18 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from toolbox.message_moving import MovedMessage, message_can_be_moved
-from toolbox.message_moving.conversion import _unattachable_embed
+from toolbox.message_moving import (
+    MovedMessage,
+    SplitSubtext,
+    Subtext,
+    message_can_be_moved,
+)
+from toolbox.message_moving.conversion import _unattachable_embed, convert_nitro_emojis
 from toolbox.message_moving.moved_message import _find_snowflake
 from toolbox.message_moving.subtext import _format_emoji
+from toolbox.messages import MessageData
+
+CDN_EMOJI_LINK = "https://cdn.discordapp.com/emojis/"
 
 # A random list of Unicode emojis that default to the emoji presentation.
 UNICODE_EMOJIS = "📨🌼🎬⌛🧆🦯🤩👤🥈🏑🌊🤲👦🛝🍏🥫🐙👰🇫🤏🚋🏽🐾🌄🔛🐸🤣🐎💿👃🔘🍋🚈👘🚹"
@@ -42,7 +51,7 @@ def test_format_unicode_partial_emoji(emoji: str) -> None:
 )
 def test_format_partial_emoji(name: str, animated: bool, id_: int) -> None:
     file_ending = "webp?animated=true" if animated else "png"
-    url = f"https://cdn.discordapp.com/emojis/{id_}.{file_ending}"
+    url = f"{CDN_EMOJI_LINK}{id_}.{file_ending}"
     assert (
         _format_emoji(dc.PartialEmoji(name=name, animated=animated, id=id_))
         == f"[{name}](<{url}>)"
@@ -64,9 +73,7 @@ def test_format_emoji_is_usable(is_usable: bool, output: str) -> None:
 
 @pytest.mark.parametrize(("guild", "result"), [(object(), True), (None, False)])
 def test_message_can_be_moved_message_guild(guild: object, result: bool) -> None:
-    fake_message = cast(
-        "dc.Message", SimpleNamespace(guild=guild, type=dc.MessageType.default)
-    )
+    fake_message = Mock(dc.Message, guild=guild, type=dc.MessageType.default)
     assert message_can_be_moved(fake_message) == result
 
 
@@ -86,7 +93,7 @@ def test_message_can_be_moved_message_guild(guild: object, result: bool) -> None
     ],
 )
 def test_message_can_be_moved_message_type(type_: dc.MessageType, result: bool) -> None:
-    fake_message = cast("dc.Message", SimpleNamespace(guild=object(), type=type_))
+    fake_message = Mock(dc.Message, guild=object(), type=type_)
     assert message_can_be_moved(fake_message) == result
 
 
@@ -210,3 +217,432 @@ def test_get_moved_message_author_id(content: str, result: int | None) -> None:
     # NOTE: casting a SimpleNamespace to MovedMessage seems to break the code in
     # ExtensibleMessage, so we shall access _extract_author_id() directly.
     assert MovedMessage._extract_author_id(content) == result
+
+
+@pytest.mark.parametrize(
+    ("content", "emoji_id", "emoji_guild_id", "force", "expected"),
+    [
+        (
+            "<:foo:12345>",
+            12345,
+            999,
+            False,
+            f"[foo](<{CDN_EMOJI_LINK}12345.webp?size=48&name=foo>)",
+        ),
+        (
+            "<a:bar:67890>",
+            67890,
+            999,
+            False,
+            f"[bar](<{CDN_EMOJI_LINK}67890.gif?size=48&animated=true&name=bar>)",
+        ),
+        ("<:same_guild:11111>", 11111, 111, False, "<:same_guild:11111>"),
+        (
+            "<:same_guild:11111>",
+            11111,
+            111,
+            True,
+            f"[same_guild](<{CDN_EMOJI_LINK}11111.webp?size=48&name=same_guild>)",
+        ),
+        (
+            "<:unknown:22222>",
+            22222,
+            None,
+            False,
+            f"[unknown](<{CDN_EMOJI_LINK}22222.webp?size=48&name=unknown>)",
+        ),
+        (
+            "hi <:foo:12345>",
+            12345,
+            999,
+            False,
+            f"hi [foo](<{CDN_EMOJI_LINK}12345.webp?size=48&name=foo>)",
+        ),
+        (
+            "<:a:1> <:b:2> <:c:3>",
+            1,
+            999,
+            False,
+            f"[a](<{CDN_EMOJI_LINK}1.webp?size=48&name=a>) "
+            f"[b](<{CDN_EMOJI_LINK}2.webp?size=48&name=b>) "
+            f"[c](<{CDN_EMOJI_LINK}3.webp?size=48&name=c>)",
+        ),
+        ("no emojis here", None, None, False, "no emojis here"),
+        ("", None, None, False, ""),
+    ],
+)
+def test_convert_nitro_emojis(
+    content: str,
+    emoji_id: int | None,
+    emoji_guild_id: int | None,
+    force: bool,
+    expected: str,
+) -> None:
+    fake_guild = Mock(dc.Guild, id=111)
+    fake_client = Mock(dc.Client)
+    fake_client.get_emoji.return_value = (
+        Mock(dc.Emoji, guild_id=emoji_guild_id) if emoji_id is not None else None
+    )
+
+    result = convert_nitro_emojis(fake_client, fake_guild, content, force=force)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("strs", "expected"),
+    [
+        ((), ""),
+        (("hello",), "-# hello"),
+        (("hello", "world"), "-# hello\n-# world"),
+        (("a", "b", "c"), "-# a\n-# b\n-# c"),
+        (("", "hello", ""), "-# hello"),
+        (("hello", "", "world"), "-# hello\n-# world"),
+    ],
+)
+def test_subtext_sub_join(strs: tuple[str, ...], expected: str) -> None:
+    assert Subtext._sub_join(*strs) == expected
+
+
+@given(st.lists(st.text(max_size=30), max_size=30).map(tuple))
+def test_subtext_sub_join_lines_retained(strs: tuple[str, ...]) -> None:
+    joined = Subtext._sub_join(*strs)
+    assert all(s in joined for s in strs)
+
+
+@pytest.mark.parametrize(
+    ("reaction_line", "expected"),
+    [
+        ("-# 👍 ×5", {"👍": 5}),
+        ("-# 👍 ×5   👎 ×3", {"👍": 5, "👎": 3}),
+        ("-# 🎉 ×10   🚀 ×2   💯 ×1", {"🎉": 10, "🚀": 2, "💯": 1}),
+        ("-# [foo](<https://example.com>) ×42", {"[foo](<https://example.com>)": 42}),
+        ("-# 👍 ×5   👎", {}),
+        ("-# 👍 ×5   invalid", {}),
+        ("-# not a reaction line", {}),
+        ("👍 ×5", {}),
+        ("-#👍 ×5", {}),
+        ("", {}),
+        ("-# ", {}),
+        ("-# 👍×5", {}),
+        ("-# 👍 x5", {}),
+    ],
+)
+def test_split_subtext_get_reactions(
+    reaction_line: str, expected: dict[str, int]
+) -> None:
+    assert SplitSubtext._get_reactions(reaction_line) == expected
+
+
+@pytest.mark.parametrize(
+    ("lines", "expected_content", "expected_reactions"),
+    [
+        (["-# subtext only"], "", {}),
+        (["hello world", "-# subtext"], "hello world", {}),
+        (["hello world", "-# 👍 ×5", "-# subtext"], "hello world", {"👍": 5}),
+        (
+            ["line1", "line2", "-# 👍 ×5   👎 ×3", "-# subtext"],
+            "line1\nline2",
+            {"👍": 5, "👎": 3},
+        ),
+        (
+            ["hello", "-# invalid reaction", "-# subtext"],
+            "hello\n-# invalid reaction",
+            {},
+        ),
+        (["hello", "-# 👍×5", "-# subtext"], "hello\n-# 👍×5", {}),
+        (["-# 👍 ×5", "-# subtext"], "", {"👍": 5}),
+    ],
+)
+def test_split_subtext_init(
+    lines: list[str], expected_content: str, expected_reactions: dict[str, int]
+) -> None:
+    fake_message = Mock(MovedMessage, content="\n".join(lines))
+    split = SplitSubtext(fake_message)
+    assert split.content == expected_content
+    assert split.reactions == expected_reactions
+
+
+@pytest.mark.parametrize(
+    ("reactions", "expected_subtext"),
+    [
+        ({}, "-# subtext line"),
+        ({"👍": 5, "👎": 3}, "-# 👍 ×5   👎 ×3\n-# subtext line"),
+    ],
+)
+def test_split_subtext_subtext_property(
+    reactions: dict[str, int], expected_subtext: str
+) -> None:
+    fake_message = Mock(MovedMessage, content="-# subtext line")
+    split = SplitSubtext(fake_message)
+    split.reactions = reactions
+    assert split.subtext == expected_subtext
+
+
+def _reaction(emoji: str, count: int) -> dc.Reaction:
+    return Mock(dc.Reaction, emoji=emoji, count=count)
+
+
+def test_split_subtext_update() -> None:
+    fake_message = Mock(MovedMessage, content="content\n-# subtext")
+    split = SplitSubtext(fake_message)
+    split.reactions = {"👍": 5}
+
+    fake_channel = Mock(dc.TextChannel, id=123456, mention="<#123456>")
+    fake_executor = Mock(dc.Member, mention="<@789>")
+    new_message = Mock(
+        dc.Message,
+        channel=fake_channel,
+        reactions=[_reaction("👍", 3), _reaction("👎", 2)],
+    )
+
+    split.update(new_message, fake_executor)
+
+    assert split.reactions == {"👍": 8, "👎": 2}
+    assert ", then from <#123456> by <@789>" in split._subtext
+
+
+def test_split_subtext_update_no_executor() -> None:
+    fake_message = Mock(MovedMessage, content="content\n-# subtext")
+    split = SplitSubtext(fake_message)
+    split.reactions = {"👍": 5}
+    original_subtext = split._subtext
+
+    new_message = Mock(dc.Message, reactions=[_reaction("👎", 2)])
+
+    split.update(new_message, None)
+
+    assert split.reactions == {"👍": 5, "👎": 2}
+    assert split._subtext == original_subtext
+
+
+def _make_message_data(
+    author: dc.User | None = None,
+    channel: dc.TextChannel | None = None,
+    reactions: list[dc.Reaction] | None = None,
+    created_at: dt.datetime | None = None,
+    edited_at: dt.datetime | None = None,
+    skipped_attachments: int = 0,
+) -> MessageData:
+    return Mock(
+        MessageData,
+        author=author or Mock(dc.User, mention="<@123>"),
+        channel=channel or Mock(dc.TextChannel, mention="<#456>"),
+        reactions=reactions or [],
+        created_at=created_at or dt.datetime.now(tz=dt.UTC),
+        edited_at=edited_at,
+        skipped_attachments=skipped_attachments,
+    )
+
+
+@pytest.mark.parametrize(
+    ("reactions", "expected"),
+    [
+        ([], ""),
+        ([_reaction("👍", 5)], "👍 ×5"),
+        ([_reaction("👍", 5), _reaction("👎", 3)], "👍 ×5   👎 ×3"),
+        (
+            [_reaction("🎉", 10), _reaction("🚀", 2), _reaction("💯", 1)],
+            "🎉 ×10   🚀 ×2   💯 ×1",
+        ),
+    ],
+)
+def test_subtext_format_reactions(reactions: list[dc.Reaction], expected: str) -> None:
+    subtext = object.__new__(Subtext)
+    subtext.msg_data = _make_message_data(reactions=reactions)
+    subtext._format_reactions()
+
+    assert subtext.reactions == expected
+
+
+@pytest.mark.parametrize(
+    ("executor", "expected_move_hint"),
+    [(Mock(dc.Member, mention="<@123>"), "Moved from <#456> by <@123>"), (None, "")],
+)
+def test_subtext_init_move_hint(
+    executor: dc.Member | None, expected_move_hint: str
+) -> None:
+    fake_author = Mock(dc.User, mention="<@789>")
+    msg_data = _make_message_data(author=fake_author)
+
+    subtext = Subtext(msg_data, executor)
+
+    assert subtext.move_hint == expected_move_hint
+    assert subtext.author == "Authored by <@789>"
+
+
+@pytest.mark.parametrize(
+    ("skipped_attachments", "expected_skipped"),
+    [
+        (0, ""),
+        (1, "Skipped 1 large attachment"),
+        (3, "Skipped 3 large attachments"),
+    ],
+)
+def test_subtext_init_skipped(skipped_attachments: int, expected_skipped: str) -> None:
+    msg_data = _make_message_data(skipped_attachments=skipped_attachments)
+    subtext = Subtext(msg_data, None)
+    assert subtext.skipped == expected_skipped
+
+
+@pytest.mark.parametrize(
+    ("poll", "expected_poll_error"),
+    [
+        (None, ""),
+        (Mock(dc.Poll), ""),
+        (dc.utils.MISSING, "Unable to attach closed poll"),
+    ],
+)
+def test_subtext_init_poll_error(
+    poll: dc.Poll | None, expected_poll_error: str
+) -> None:
+    msg_data = _make_message_data()
+    subtext = Subtext(msg_data, None, poll=poll)
+    assert subtext.poll_error == expected_poll_error
+
+
+@pytest.mark.parametrize(
+    ("delta", "expected_timestamp_empty"),
+    [
+        (dt.timedelta(), True),
+        (dt.timedelta(hours=1), True),
+        (dt.timedelta(hours=11), True),
+        (dt.timedelta(hours=13), False),
+        (dt.timedelta(days=1), False),
+    ],
+)
+def test_subtext_init_timestamp(
+    delta: dt.timedelta,
+    expected_timestamp_empty: bool,
+) -> None:
+    msg_data = _make_message_data(created_at=dt.datetime.now(tz=dt.UTC) - delta)
+    subtext = Subtext(msg_data, None)
+    assert (subtext.timestamp == "") is expected_timestamp_empty
+
+
+def test_subtext_init_timestamp_with_edited() -> None:
+    old_time = dt.datetime.now(tz=dt.UTC) - dt.timedelta(days=1)
+    edited_time = dt.datetime.now(tz=dt.UTC) - dt.timedelta(hours=6)
+    msg_data = _make_message_data(created_at=old_time, edited_at=edited_time)
+
+    subtext = Subtext(msg_data, None)
+
+    assert "<t:" in subtext.timestamp
+    assert "edited at <t:" in subtext.timestamp
+
+
+@pytest.mark.parametrize(
+    (
+        "reactions",
+        "author",
+        "timestamp",
+        "skipped",
+        "poll_error",
+        "move_hint",
+        "expected",
+    ),
+    [
+        ([], "", "", "", "", "", ""),
+        (["👍"], "Authored by <@1>", "", "", "", "", "-# 👍\n-# Authored by <@1>"),
+        (
+            [],
+            "Authored by <@1>",
+            "<t:123>",
+            "",
+            "",
+            "",
+            "-# Authored by <@1> on <t:123>",
+        ),
+        (
+            [],
+            "Authored by <@1>",
+            "",
+            "Skipped 1",
+            "",
+            "",
+            "-# Authored by <@1> • Skipped 1",
+        ),
+        (
+            [],
+            "",
+            "",
+            "",
+            "Unable to attach closed poll",
+            "",
+            "-# Unable to attach closed poll",
+        ),
+        ([], "", "", "", "", "Moved from <#1> by <@2>", "-# Moved from <#1> by <@2>"),
+        (
+            ["👍"],
+            "Authored by <@1>",
+            "<t:123>",
+            "Skipped 1",
+            "Unable to attach closed poll",
+            "Moved from <#1> by <@2>",
+            "-# 👍\n-# Authored by <@1> on <t:123> • Skipped 1 • Unable to attach "
+            "closed poll • Moved from <#1> by <@2>",
+        ),
+        (
+            [],
+            "Authored by <@1>",
+            "<t:123>",
+            "",
+            "",
+            "Moved from <#1> by <@2>",
+            "-# Authored by <@1> on <t:123> • Moved from <#1> by <@2>",
+        ),
+    ],
+)
+def test_subtext_format(
+    reactions: list[str],
+    author: str,
+    timestamp: str,
+    skipped: str,
+    poll_error: str,
+    move_hint: str,
+    expected: str,
+) -> None:
+    subtext = object.__new__(Subtext)
+    subtext.reactions = "   ".join(reactions)
+    subtext.author = author
+    subtext.timestamp = timestamp
+    subtext.skipped = skipped
+    subtext.poll_error = poll_error
+    subtext.move_hint = move_hint
+
+    assert subtext.format() == expected
+
+
+@pytest.mark.parametrize(
+    ("reactions", "skipped", "poll_error", "expected"),
+    [
+        ("", "", "", ""),
+        ("👍 ×5", "", "", "-# 👍 ×5"),
+        ("", "Skipped 1 large attachment", "", "-# Skipped 1 large attachment"),
+        ("", "", "Unable to attach closed poll", "-# Unable to attach closed poll"),
+        (
+            "👍 ×5",
+            "Skipped 1 large attachment",
+            "Unable to attach closed poll",
+            "-# 👍 ×5\n-# Skipped 1 large attachment\n-# Unable to attach closed poll",
+        ),
+    ],
+)
+def test_subtext_format_simple(
+    reactions: str, skipped: str, poll_error: str, expected: str
+) -> None:
+    subtext = object.__new__(Subtext)
+    subtext.reactions = reactions
+    subtext.skipped = skipped
+    subtext.poll_error = poll_error
+
+    assert subtext.format_simple() == expected
+
+
+@pytest.mark.parametrize(
+    ("message_content", "error_message"),
+    [("-# meow", "not a moved message"), ("-# <@567>", "incorrect author passed")],
+)
+def test_moved_message_init_errors(message_content: str, error_message: str) -> None:
+    message = Mock(dc.WebhookMessage, content=message_content)
+    with pytest.raises(ValueError, match=re.escape(error_message)):
+        MovedMessage(message, author=Mock(dc.Member, id=123))
