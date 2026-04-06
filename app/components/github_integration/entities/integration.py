@@ -50,7 +50,7 @@ class GitHubEntities(commands.Cog):
 
         # Check which entities changed
         for entity in tuple(entity_to_message_map):
-            key = (entity.owner, entity.repo_name, entity.number)
+            key = (entity.owner, entity.repo_name, entity.number), None
             await entity_cache.fetch(key)
             refreshed_entity = await entity_cache.get(key)
             if entity == refreshed_entity:

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
     import discord as dc
 
-    from .cache import EntitySignature
+    from app.components.github_integration.models import EntitySignature
 
 ENTITY_REGEX = re.compile(
     r"(?P<site>\bhttps?://(?:www\.)?github\.com/)?"
@@ -78,7 +78,7 @@ async def resolve_repo_signature(
 
 async def resolve_entity_signatures(
     message: dc.Message,
-) -> AsyncGenerator[EntitySignature]:
+) -> AsyncGenerator[tuple[EntitySignature, str | None]]:
     valid_signatures = 0
     for match in ENTITY_REGEX.finditer(remove_codeblocks(message.content)):
         site, sep = match["site"], match["sep"]
@@ -101,7 +101,8 @@ async def resolve_entity_signatures(
                 continue
 
         if sig := await resolve_repo_signature(owner, repo):
-            yield (*sig, number)
+            kind_hint = sep.strip("/#") if site else None
+            yield (*sig, number), kind_hint
             valid_signatures += 1
             if valid_signatures == 10:
                 break
