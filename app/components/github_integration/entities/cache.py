@@ -5,13 +5,13 @@ from githubkit.exception import RequestFailed
 from .discussions import get_discussion
 from app.components.github_integration.models import Entity, Issue, PullRequest
 from app.config import gh
-from toolbox.cache import TTRCache
+from toolbox.cache import TTLCache
 
 type EntitySignature = tuple[str, str, int]
 
 
 @final
-class EntityCache(TTRCache[EntitySignature, Entity]):
+class EntityCache(TTLCache[EntitySignature, Entity]):
     @override
     async def fetch(self, key: EntitySignature) -> None:
         try:

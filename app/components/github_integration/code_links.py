@@ -15,7 +15,7 @@ from zig_codeblocks import highlight_zig_code
 
 from app.components.zig_codeblocks import FILE_HIGHLIGHT_NOTE, THEME
 from app.config import gh
-from toolbox.cache import TTRCache
+from toolbox.cache import TTLCache
 from toolbox.discord import suppress_embeds_after_delay
 from toolbox.linker import (
     ItemActions,
@@ -58,7 +58,7 @@ class Snippet(NamedTuple):
 
 
 @final
-class ContentCache(TTRCache[SnippetPath, str]):
+class ContentCache(TTLCache[SnippetPath, str]):
     @override
     async def fetch(self, key: SnippetPath) -> None:
         with suppress(RequestFailed):
