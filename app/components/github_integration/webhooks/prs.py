@@ -15,6 +15,7 @@ from app.components.github_integration.webhooks.utils import (
 from app.components.github_integration.webhooks.vouch import (
     VOUCH_KIND_COLORS,
     VOUCH_PAST_TENSE,
+    cleanup_vouch_queue,
     extract_vouch_details,
     is_vouch_pr,
 )
@@ -117,36 +118,46 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
 
     @webhook.event.pull_request.closed
     async def closed(event: events.PullRequestClosed) -> None:
+        cleanup_vouch_queue(vouch_queue)
+
         pr = event.pull_request
         action, color = ("merged", "purple") if pr.merged else ("closed", "red")
-        if action == "merged" and is_vouch_pr(event):
-            if not (vouch_details := extract_vouch_details(pr.body)):
-                logger.error("failed to extract vouch data from PR #{pr}", pr=pr.number)
-                return
-
-            url, entity_id, comment_id, vouchee = vouch_details
-            if comment_id not in vouch_queue:
-                logger.error(
-                    "missing vouch queue entry for comment {comment} in #{entity}",
-                    comment=comment_id,
-                    entity=entity_id,
-                )
-                return
-
-            action, actor, footer = vouch_queue.pop(comment_id)
-            action_past = VOUCH_PAST_TENSE[action]
-            content = EmbedContent(f"{action_past} @{vouchee} in #{entity_id}", url)
-            color = VOUCH_KIND_COLORS[action]
-            await send_embed(actor, content, footer, color=color)
+        if not is_vouch_pr(event):
+            await send_embed(
+                event.sender,
+                pr_embed_content(pr, f"{action} {{}}"),
+                pr_footer(pr, emoji="pull_" + action),
+                color=color,
+                origin_repo=event.repository,
+            )
             return
 
-        await send_embed(
-            event.sender,
-            pr_embed_content(pr, f"{action} {{}}"),
-            pr_footer(pr, emoji="pull_" + action),
-            color=color,
-            origin_repo=event.repository,
-        )
+        if not (vouch_details := extract_vouch_details(pr.body)):
+            logger.error("failed to extract vouch data from PR #{pr}", pr=pr.number)
+            return
+
+        url, entity_id, comment_id, vouchee = vouch_details
+        if comment_id not in vouch_queue:
+            logger.error(
+                "missing vouch queue entry for comment {comment} in #{entity}",
+                comment=comment_id,
+                entity=entity_id,
+            )
+            return
+
+        if action == "closed":
+            logger.warning(
+                "vouch PR #{pr} was closed without merge, "
+                "cleaning up queue entry for comment {comment}",
+                pr=pr.number,
+                comment=comment_id,
+            )
+            return
+
+        kind, actor, footer, _ = vouch_queue.pop(comment_id)
+        action_past = VOUCH_PAST_TENSE[kind]
+        content = EmbedContent(f"{action_past} @{vouchee} in #{entity_id}", url)
+        await send_embed(actor, content, footer, color=VOUCH_KIND_COLORS[kind])
 
     @webhook.event.pull_request.reopened
     async def reopened(event: events.PullRequestReopened) -> None:
