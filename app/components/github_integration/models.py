@@ -16,6 +16,8 @@ from toolbox.misc import truncate
 if TYPE_CHECKING:
     from githubkit.versions.latest.models import IssuePropLabelsItemsOneof1
 
+type EntitySignature = tuple[str, str, int]
+
 
 def state_validator(value: object) -> bool:
     match value:
@@ -132,6 +134,11 @@ class EntityGist(NamedTuple):
     owner: str
     repo: str
     number: int
+    kind: str
+
+    @property
+    def cache_key(self) -> tuple[EntitySignature, str]:
+        return (self.owner, self.repo, self.number), self.kind
 
     @override
     def __str__(self) -> str:
