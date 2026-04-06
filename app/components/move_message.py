@@ -11,6 +11,7 @@ from app.config import config
 from toolbox.discord import GuildTextChannel, dynamic_timestamp, is_dm, safe_edit
 from toolbox.errors import SafeModal, SafeView
 from toolbox.message_moving import (
+    MOVED_MESSAGE_MODIFICATION_CUTOFF,
     MovedMessage,
     MovedMessageLookupFailed,
     SplitSubtext,
@@ -29,10 +30,6 @@ if TYPE_CHECKING:
 
 # From https://discord.com/developers/docs/topics/opcodes-and-status-codes#json-json-error-codes.
 _MAXIMUM_NUMBER_OF_ACTIVE_THREADS_REACHED = 160006
-
-_MOVED_MESSAGE_MODIFICATION_CUTOFF = dt.datetime(
-    year=2025, month=6, day=18, hour=23, minute=10, tzinfo=dt.UTC
-)
 
 _EDIT_METHOD_PROMPT = "What would you like to do?"
 _MESSAGE_EDIT_HELP = (
@@ -805,7 +802,7 @@ class MoveMessage(commands.Cog):
     ) -> None:
         assert not is_dm(interaction.user)
 
-        if message.created_at < _MOVED_MESSAGE_MODIFICATION_CUTOFF or (
+        if message.created_at < MOVED_MESSAGE_MODIFICATION_CUTOFF or (
             (moved_message := await MovedMessage.from_message(message))
             is MovedMessageLookupFailed.NOT_FOUND
         ):

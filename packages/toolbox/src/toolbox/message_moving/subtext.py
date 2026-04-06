@@ -12,21 +12,15 @@ if TYPE_CHECKING:
 
 _REACTION_REGEX = re.compile(r"([^\s×]+) ×(\d+)", re.ASCII)  # noqa: RUF001
 
-
-def _format_emoji(emoji: str | dc.PartialEmoji | dc.Emoji) -> str:
-    if (
-        isinstance(emoji, str)
-        or (isinstance(emoji, dc.PartialEmoji) and emoji.is_unicode_emoji())
-        or (isinstance(emoji, dc.Emoji) and emoji.is_usable())
-    ):
-        return str(emoji)
-    return f"[{emoji.name}](<{emoji.url}>)"
+MOVED_MESSAGE_MODIFICATION_CUTOFF = dt.datetime(
+    year=2025, month=6, day=18, hour=23, minute=10, tzinfo=dt.UTC
+)
 
 
 @final
 class Subtext:
     # NOTE: when changing the subtext's format in ways that are not backward-compatible,
-    # don't forget to bump the cut-off time in app/components/message_filter.py!
+    # don't forget to bump the cut-off time above!
     reactions: str
     timestamp: str
     author: str
@@ -153,3 +147,13 @@ class SplitSubtext:
             for emoji, count in self.reactions.items()
         )
         return f"-# {formatted_reactions}\n{self._subtext}"
+
+
+def _format_emoji(emoji: str | dc.PartialEmoji | dc.Emoji) -> str:
+    if (
+        isinstance(emoji, str)
+        or (isinstance(emoji, dc.PartialEmoji) and emoji.is_unicode_emoji())
+        or (isinstance(emoji, dc.Emoji) and emoji.is_usable())
+    ):
+        return str(emoji)
+    return f"[{emoji.name}](<{emoji.url}>)"
