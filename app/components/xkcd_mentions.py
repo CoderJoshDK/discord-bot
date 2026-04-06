@@ -9,7 +9,7 @@ from discord.ext import commands
 from pydantic import BaseModel, Field
 
 from app.config import config
-from toolbox.cache import TTRCache
+from toolbox.cache import TTLCache
 from toolbox.discord import SUPPORTED_IMAGE_FORMATS
 from toolbox.linker import (
     ItemActions,
@@ -52,7 +52,7 @@ class XKCDFetchFailed(NamedTuple):
 
 
 @final
-class XKCDMentionCache(TTRCache[int, XKCDResult]):
+class XKCDMentionCache(TTLCache[int, XKCDResult]):
     @override
     async def fetch(self, key: int) -> None:
         async with httpx.AsyncClient() as client:

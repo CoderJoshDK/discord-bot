@@ -16,7 +16,7 @@ from app.components.github_integration.models import (
     Reactions,
 )
 from app.config import gh
-from toolbox.cache import TTRCache
+from toolbox.cache import TTLCache
 from toolbox.discord import escape_special
 from toolbox.misc import COLOR_PALETTE
 
@@ -290,7 +290,7 @@ def _format_commit_id(
 
 
 @final
-class CommentCache(TTRCache[tuple[EntityGist, str, int], Comment]):
+class CommentCache(TTLCache[tuple[EntityGist, str, int], Comment]):
     @override
     async def fetch(self, key: tuple[EntityGist, str, int]) -> None:
         entity_gist, event_type, event_no = key

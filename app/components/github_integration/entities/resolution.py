@@ -7,7 +7,7 @@ from githubkit.exception import RequestFailed
 from zig_codeblocks import extract_codeblocks
 
 from app.config import REPO_ALIASES, gh
-from toolbox.cache import TTRCache
+from toolbox.cache import TTLCache
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -27,7 +27,7 @@ ENTITY_REGEX = re.compile(
 
 
 @final
-class OwnerCache(TTRCache[str, str]):
+class OwnerCache(TTLCache[str, str]):
     @override
     async def fetch(self, key: str) -> None:
         with suppress(RequestFailed, RuntimeError):

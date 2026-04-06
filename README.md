@@ -84,7 +84,7 @@ A full GitHub URL (such as `https://github.com/ghostty-org/ghostty/pull/4876`)
 will also be responded to in a similar fashion, and the original GitHub embed
 will be suppressed.
 
-The bot also keeps a TTR cache to avoid looking up the same entity multiple
+The bot also keeps a TTL cache to avoid looking up the same entity multiple
 times (with data being refetched 30 minutes since last use), making the bot more
 responsive (the example below can take ~2s on first lookup and ~5ms on
 subsequent lookups).
@@ -94,7 +94,7 @@ subsequent lookups).
 ### Code links
 
 Ghostty Bot responds to GitHub code range links with code blocks containing the
-linked code. Same edit/delete hook and TTR cache rules apply.
+linked code. Same edit/delete hook and TTL cache rules apply.
 
 <img src="https://github.com/user-attachments/assets/336b4a18-52c5-4ae6-9035-2a1f72856dfe" alt="Code links example" width="85%">
 
@@ -102,7 +102,7 @@ linked code. Same edit/delete hook and TTR cache rules apply.
 
 Comments on issues, PRs, and discussions are displayed by the bot when linked. A
 subset of GitHub events (e.g. "requested review", "closed the issue", "added
-label") is also supported. Same edit/delete hook and TTR cache rules apply.
+label") is also supported. Same edit/delete hook and TTL cache rules apply.
 
 <img src="https://github.com/user-attachments/assets/217ef598-5fcb-4854-b2d6-a2b7d67435e8" alt="Entity comments example" width="65%">
 

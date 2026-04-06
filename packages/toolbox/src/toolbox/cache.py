@@ -3,15 +3,15 @@ from abc import ABC, abstractmethod
 
 from loguru import logger
 
-__all__ = ("TTRCache",)
+__all__ = ("TTLCache",)
 
 
-class TTRCache[KT, VT](ABC):
-    _ttr: dt.timedelta
+class TTLCache[KT, VT](ABC):
+    _ttl: dt.timedelta
 
-    def __init__(self, **ttr: float) -> None:
+    def __init__(self, **ttl: float) -> None:
         """Keyword arguments are passed to datetime.timedelta."""
-        self._ttr = dt.timedelta(**ttr)
+        self._ttl = dt.timedelta(**ttl)
         self._cache: dict[KT, tuple[dt.datetime, VT]] = {}
 
     def __contains__(self, key: KT) -> bool:
@@ -33,7 +33,7 @@ class TTRCache[KT, VT](ABC):
         for key in {
             key
             for key, (timestamp, _) in self._cache.items()
-            if now - timestamp >= self._ttr
+            if now - timestamp >= self._ttl
         }:
             logger.debug(
                 "dropping expired {cache} key {key!r}", cache=cache_name, key=key
