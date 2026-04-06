@@ -4,7 +4,7 @@ import difflib
 import re
 from functools import partial
 from itertools import islice
-from typing import TYPE_CHECKING, Any, NamedTuple, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, NamedTuple, NotRequired, Protocol, TypedDict
 
 import discord as dc
 from monalisten import events
@@ -35,10 +35,10 @@ GITHUB_DISCUSSION_URL = re.compile(
 )  # fmt: skip
 
 
-class EmbedContentArgs(TypedDict, total=False):
+class EmbedContentArgs(TypedDict):
     title: str
     url: str
-    description: str | None
+    description: NotRequired[str | None]
 
 
 class EmbedContent(NamedTuple):
