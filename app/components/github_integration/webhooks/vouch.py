@@ -1,3 +1,4 @@
+import time
 from typing import TYPE_CHECKING, Literal, NamedTuple
 from urllib.parse import urlparse
 
@@ -12,9 +13,24 @@ if TYPE_CHECKING:
     from app.components.github_integration.webhooks.utils import Footer
     from toolbox.misc import EmbedColor
 
+type AuthorAssociation = Literal[
+    "COLLABORATOR",
+    "CONTRIBUTOR",
+    "FIRST_TIMER",
+    "FIRST_TIME_CONTRIBUTOR",
+    "MANNEQUIN",
+    "MEMBER",
+    "NONE",
+    "OWNER",
+]
 type VouchKind = Literal["vouch", "unvouch", "denounce"]
 type VouchQueue = dict[int, VouchQueueEntry]
 
+MAINTAINER_ASSOCIATIONS = frozenset[AuthorAssociation]({
+    "OWNER",
+    "MEMBER",
+    "COLLABORATOR",
+})
 VOUCH_PAST_TENSE: dict[VouchKind, str] = {
     "vouch": "vouched",
     "unvouch": "unvouched",
@@ -25,12 +41,18 @@ VOUCH_KIND_COLORS: dict[VouchKind, EmbedColor] = {
     "unvouch": "orange",
     "denounce": "red",
 }
+VOUCH_QUEUE_TTL_SECONDS = 3600
 
 
 class VouchQueueEntry(NamedTuple):
     kind: VouchKind
     actor: SimpleUser
     footer: Footer
+    created_at: float
+
+
+def is_maintainer(author_association: AuthorAssociation) -> bool:
+    return author_association in MAINTAINER_ASSOCIATIONS
 
 
 def find_vouch_command(body: str) -> VouchKind | None:
@@ -43,23 +65,54 @@ def find_vouch_command(body: str) -> VouchKind | None:
     return None
 
 
+def cleanup_vouch_queue(vouch_queue: VouchQueue) -> None:
+    now = time.monotonic()
+    for comment_id in (
+        comment_id
+        for comment_id, entry in vouch_queue.items()
+        if now - entry.created_at > VOUCH_QUEUE_TTL_SECONDS
+    ):
+        entry = vouch_queue.pop(comment_id)
+        logger.warning(
+            "removed stale vouch queue entry for comment {comment_id} "
+            "(command: {command}, actor: @{actor})",
+            comment_id=comment_id,
+            command=entry.kind,
+            actor=entry.actor.login,
+        )
+
+
 def register_vouch_command(
     vouch_queue: VouchQueue,
     command: VouchKind,
     event: events.IssueCommentCreated | events.DiscussionCommentCreated,
     footer: Footer,
-) -> None:
+) -> bool:
     number = (
         event.issue.number
         if isinstance(event, events.IssueCommentCreated)
         else event.discussion.number
     )
+    author_association: AuthorAssociation = event.comment.author_association
+    if not is_maintainer(author_association):
+        logger.warning(
+            "ignoring vouch command from non-maintainer @{user} "
+            "(association: {assoc}) in #{entity_id}",
+            user=event.sender.login,
+            assoc=author_association,
+            entity_id=number,
+        )
+        return False
+
     logger.info(
-        "ignoring vouch system comment from @{user} in #{entity_id}",
+        "registered vouch system command from @{user} in #{entity_id}",
         user=event.sender.login,
         entity_id=number,
     )
-    vouch_queue[event.comment.id] = VouchQueueEntry(command, event.sender, footer)
+    vouch_queue[event.comment.id] = VouchQueueEntry(
+        command, event.sender, footer, time.monotonic()
+    )
+    return True
 
 
 def extract_vouch_details(body: str | None) -> tuple[str, int, int, str] | None:
