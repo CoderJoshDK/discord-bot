@@ -1,9 +1,10 @@
 import datetime as dt
-from types import SimpleNamespace
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 from githubkit.exception import RequestFailed
+from githubkit.versions.latest.models import Issue
 
 from tests.utils import config
 from tests.utils import kitposer as kp
@@ -13,7 +14,7 @@ from app.components.github_integration.entities.discussions import DISCUSSION_QU
 from app.components.github_integration.models import GitHubUser
 
 
-def fill_entity(**kwargs: Any) -> SimpleNamespace:
+def fill_entity(**kwargs: Any) -> Issue:
     defaults: dict[str, Any] = {
         "number": 0,
         "title": "",
@@ -32,7 +33,7 @@ def fill_entity(**kwargs: Any) -> SimpleNamespace:
         "changed_files": 0,
         "labels": [],
     }
-    return SimpleNamespace(defaults | kwargs)
+    return Mock(Issue, **defaults | kwargs)
 
 
 # Calling __new__ to skip initialization and having to pass in a proper Response object
