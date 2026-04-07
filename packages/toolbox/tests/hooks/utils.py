@@ -13,8 +13,8 @@ def _spawn_message(**kwargs: Any) -> dc.Message:
 
 
 def spawn_user_message(**kwargs: Any) -> dc.Message:
-    return _spawn_message(author=Mock(bot=False), **kwargs)
+    return _spawn_message(author=Mock(dc.Member, bot=False), **kwargs)
 
 
 def spawn_bot_message(**kwargs: Any) -> dc.Message:
-    return _spawn_message(author=Mock(bot=True), **kwargs)
+    return _spawn_message(author=Mock(dc.Member, bot=True), **kwargs)

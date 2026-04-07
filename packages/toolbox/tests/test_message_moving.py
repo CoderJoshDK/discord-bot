@@ -64,8 +64,8 @@ def test_format_partial_emoji(name: str, animated: bool, id_: int) -> None:
 def test_format_emoji_is_usable(is_usable: bool, output: str) -> None:
     fake_emoji = Mock(
         dc.Emoji,
-        is_usable=Mock(return_value=is_usable),
-        __str__=Mock(return_value="<foo>"),
+        is_usable=Mock(return_value=is_usable),  # test: allow-specless-mock
+        __str__=Mock(return_value="<foo>"),  # test: allow-specless-mock
     )
     fake_emoji.configure_mock(name="foo", url="bar")
     assert _format_emoji(fake_emoji) == output
