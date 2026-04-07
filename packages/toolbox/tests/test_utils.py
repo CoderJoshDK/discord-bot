@@ -1,8 +1,7 @@
 import datetime as dt
 import subprocess
 import sys
-from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock
 
 import discord as dc
@@ -11,6 +10,7 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from toolbox.discord import (
+    Account,
     dynamic_timestamp,
     format_or_file,
     is_dm,
@@ -29,8 +29,6 @@ from toolbox.misc import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
-
-    from toolbox.discord import Account
 
 
 @pytest.mark.parametrize(("type_", "result"), [(dc.Member, False), (dc.User, True)])
@@ -58,10 +56,7 @@ def test_post_has_tag(tag: str, result: bool) -> None:
         dc.ForumTag(name=name)
         for name in ("foo", "bar", "Lorem", "ipSUM", "NOT_ISSUE", "macos", "linux")
     ]
-    assert (
-        post_has_tag(cast("dc.Thread", SimpleNamespace(applied_tags=tags)), tag)
-        == result
-    )
+    assert post_has_tag(Mock(dc.Thread, applied_tags=tags), tag) == result
 
 
 @pytest.mark.parametrize(
@@ -77,7 +72,7 @@ def test_post_has_tag(tag: str, result: bool) -> None:
 )
 def test_post_is_solved(names: list[str]) -> None:
     tags = [dc.ForumTag(name=name) for name in names]
-    assert post_is_solved(cast("dc.Thread", SimpleNamespace(applied_tags=tags)))
+    assert post_is_solved(Mock(dc.Thread, applied_tags=tags))
 
 
 @pytest.mark.parametrize(
@@ -92,7 +87,7 @@ def test_post_is_solved(names: list[str]) -> None:
 )
 def test_post_is_not_solved(names: list[str]) -> None:
     tags = [dc.ForumTag(name=name) for name in names]
-    assert not post_is_solved(cast("dc.Thread", SimpleNamespace(applied_tags=tags)))
+    assert not post_is_solved(Mock(dc.Thread, applied_tags=tags))
 
 
 @given(st.lists(st.from_type(type)), st.integers())
@@ -130,7 +125,8 @@ def test_is_attachment_only(
 ) -> None:
     # NOTE: we don't actually care about having real Discord objects here, we only care
     # about whether they are truthy, so ints are used everywhere.
-    fake_message = SimpleNamespace(
+    fake_message = Mock(
+        dc.Message,
         attachments=attachments,
         components=[],
         content=content,
@@ -140,9 +136,7 @@ def test_is_attachment_only(
         stickers=[],
     )
     assert (
-        is_attachment_only(
-            cast("dc.Message", fake_message), preprocessed_content=preprocessed_content
-        )
+        is_attachment_only(fake_message, preprocessed_content=preprocessed_content)
         == result
     )
 
@@ -186,7 +180,7 @@ async def test_suppress_embeds_after_delay() -> None:
         nonlocal suppressed
         suppressed = kwargs.get("suppress", False)
 
-    fake_message = cast("dc.Message", SimpleNamespace(edit=edit))
+    fake_message = Mock(dc.Message, edit=edit)
 
     await suppress_embeds_after_delay(fake_message, 0)
 
@@ -291,7 +285,8 @@ async def test_async_process_check_output_invalid_argument() -> None:
 
 @given(st.text(), st.integers())
 def test_pretty_print_account(name: str, id_: int) -> None:
-    fake_account = cast("Account", SimpleNamespace(name=name, id=id_))
+    fake_account = Mock(Account, id=id_)
+    fake_account.name = name
     output = pretty_print_account(fake_account)
     assert name in output
     assert str(id_) in output
