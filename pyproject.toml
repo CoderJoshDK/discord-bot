@@ -97,7 +97,7 @@ isort.known-local-folder = ["app", "toolbox"]
 [tool.ruff.format]
 preview = true
 
-[tool.ruff.lint.flake8-import-conventions.aliases]
+[tool.ruff.lint.flake8-import-conventions.extend-aliases]
 discord = "dc"
 datetime = "dt"
 
