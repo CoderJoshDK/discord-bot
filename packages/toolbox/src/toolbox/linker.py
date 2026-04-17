@@ -143,6 +143,10 @@ class MessageLinker:
             self.unlink(before)
             return
 
+        if self.is_frozen(before):
+            logger.trace("skipping frozen message {msg}", msg=before)
+            return
+
         old_output = await message_processor(before)
         new_output = await message_processor(after)
         if old_output == new_output:
@@ -155,9 +159,6 @@ class MessageLinker:
         )
 
         if not (reply := self.get(before)):
-            if self.is_frozen(before):
-                logger.trace("skipping frozen message {msg}", msg=before)
-                return
             if old_output.item_count > 0:
                 logger.trace(
                     "skipping message that was removed from the linker at some point "
@@ -166,10 +167,6 @@ class MessageLinker:
                 return
             logger.debug("no objects were present before, treating as new message")
             await interactor(after)
-            return
-
-        if self.is_frozen(before):
-            logger.trace("skipping frozen message {msg}", msg=before)
             return
 
         # Some processors use negative values to symbolize special error values, so this
