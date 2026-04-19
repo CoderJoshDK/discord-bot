@@ -24,6 +24,8 @@ def prettify_suggestions(
     comment: PullRequestReviewComment
     | WebhookPullRequestReviewCommentCreatedPropComment,
 ) -> str | None:
+    # We normalize CRLF to LF as GitHub used to use CRLF for comment bodies up until
+    # some time in 2025, and we want to correctly handle both.
     body = comment.body.replace("\r\n", "\n")
     suggestions = [cb for cb in extract_codeblocks(body) if cb.lang == "suggestion"]
     if not suggestions:
