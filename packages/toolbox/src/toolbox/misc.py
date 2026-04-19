@@ -9,7 +9,12 @@ if TYPE_CHECKING:
     from githubkit.typing import Missing
     from githubkit.versions.latest.models import SimpleUser
 
-__all__ = ("URL_REGEX", "aenumerate", "async_process_check_output", "truncate")
+__all__ = (
+    "URL_REGEX",
+    "aenumerate",
+    "async_process_check_output",
+    "truncate",
+)
 
 type EmbedColor = Literal["green", "red", "purple", "gray", "orange", "blue"]
 

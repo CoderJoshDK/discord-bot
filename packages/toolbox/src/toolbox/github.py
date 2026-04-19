@@ -8,7 +8,10 @@ if TYPE_CHECKING:
         WebhookPullRequestReviewCommentCreatedPropComment,
     )
 
-__all__ = ("format_diff_note", "prettify_suggestions")
+__all__ = (
+    "format_diff_note",
+    "prettify_suggestions",
+)
 
 
 def format_diff_note(additions: int, deletions: int, changed_files: int) -> str | None:
