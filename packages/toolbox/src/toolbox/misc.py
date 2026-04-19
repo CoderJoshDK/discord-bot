@@ -9,13 +9,7 @@ if TYPE_CHECKING:
     from githubkit.typing import Missing
     from githubkit.versions.latest.models import SimpleUser
 
-__all__ = (
-    "URL_REGEX",
-    "aenumerate",
-    "async_process_check_output",
-    "format_diff_note",
-    "truncate",
-)
+__all__ = ("URL_REGEX", "aenumerate", "async_process_check_output", "truncate")
 
 type EmbedColor = Literal["green", "red", "purple", "gray", "orange", "blue"]
 
@@ -47,12 +41,6 @@ async def aenumerate[T](
     async for x in it:
         yield i, x
         i += 1
-
-
-def format_diff_note(additions: int, deletions: int, changed_files: int) -> str | None:
-    if not (changed_files and (additions or deletions)):
-        return None  # Diff size unavailable
-    return f"diff size: `+{additions}` `-{deletions}` ({changed_files} files changed)"
 
 
 async def async_process_check_output(program: str, *args: str, **kwargs: Any) -> str:

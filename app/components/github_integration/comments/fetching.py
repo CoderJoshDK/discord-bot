@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, cast, final, override
 
 from githubkit.exception import RequestFailed
 from githubkit.versions.latest.models import IssuePropPullRequest, ReactionRollup
-from zig_codeblocks import CodeBlock, extract_codeblocks
 
 from .discussions import get_discussion_comment
 from app.components.github_integration.entities.cache import entity_cache
@@ -18,6 +17,7 @@ from app.components.github_integration.models import (
 from app.config import gh
 from toolbox.cache import TTLCache
 from toolbox.discord import escape_special
+from toolbox.github import prettify_suggestions
 from toolbox.misc import COLOR_PALETTE
 
 if TYPE_CHECKING:
@@ -30,7 +30,6 @@ if TYPE_CHECKING:
         IssueEvent,
         IssueEventDismissedReview,
         IssueEventRename,
-        PullRequestReviewComment,
     )
     from pydantic import BaseModel
 
@@ -379,7 +378,7 @@ async def _get_pr_review_comment(
     entity = await entity_cache.get(entity_gist.cache_key)
     return entity and Comment(
         author=_make_author(comment.user),
-        body=_prettify_suggestions(comment),
+        body=prettify_suggestions(comment),
         reactions=_make_reactions(comment.reactions),
         entity=entity,
         entity_gist=entity_gist,
@@ -387,30 +386,6 @@ async def _get_pr_review_comment(
         html_url=comment.html_url,
         kind="Review comment",
     )
-
-
-def _prettify_suggestions(comment: PullRequestReviewComment) -> str:
-    body = comment.body.replace("\r\n", "\n")
-    suggestions = [cb for cb in extract_codeblocks(body) if cb.lang == "suggestion"]
-    if not suggestions:
-        return body
-
-    start = cast("int | None", comment.original_start_line)
-    end = cast("int", comment.original_line)
-    hunk_size = end - (end if start is None else start) + 1
-    hunk_as_deleted_diff = "\n".join(
-        ("-" + line[1:] if line[0] == "+" else line)
-        for line in comment.diff_hunk.splitlines()[-hunk_size:]
-    )
-
-    for suggestion in suggestions:
-        suggestion_as_added_diff = f"{hunk_as_deleted_diff}\n" + "\n".join(
-            f"+{line}" for line in suggestion.body.splitlines()
-        )
-        body = body.replace(
-            str(suggestion), str(CodeBlock("diff", suggestion_as_added_diff)), 1
-        )
-    return body
 
 
 async def _get_event(entity_gist: EntityGist, comment_id: int) -> Comment | None:
