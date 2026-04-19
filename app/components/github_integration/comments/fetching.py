@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, cast, final, override
 
 from githubkit.exception import RequestFailed
 from githubkit.versions.latest.models import IssuePropPullRequest, ReactionRollup
-from zig_codeblocks import extract_codeblocks
+from zig_codeblocks import CodeBlock, extract_codeblocks
 
 from .discussions import get_discussion_comment
 from app.components.github_integration.entities.cache import entity_cache
@@ -390,10 +390,8 @@ async def _get_pr_review_comment(
 
 
 def _prettify_suggestions(comment: PullRequestReviewComment) -> str:
-    suggestions = [
-        c for c in extract_codeblocks(comment.body) if c.lang == "suggestion"
-    ]
-    body = comment.body
+    body = comment.body.replace("\r\n", "\n")
+    suggestions = [cb for cb in extract_codeblocks(body) if cb.lang == "suggestion"]
     if not suggestions:
         return body
 
@@ -405,21 +403,14 @@ def _prettify_suggestions(comment: PullRequestReviewComment) -> str:
         for line in comment.diff_hunk.splitlines()[-hunk_size:]
     )
 
-    for sug in suggestions:
+    for suggestion in suggestions:
         suggestion_as_added_diff = f"{hunk_as_deleted_diff}\n" + "\n".join(
-            f"+{line}" for line in sug.body.splitlines()
+            f"+{line}" for line in suggestion.body.splitlines()
         )
         body = body.replace(
-            _make_crlf_codeblock("suggestion", sug.body.replace("\r\n", "\n")),
-            _make_crlf_codeblock("diff", suggestion_as_added_diff),
-            1,
+            str(suggestion), str(CodeBlock("diff", suggestion_as_added_diff)), 1
         )
     return body
-
-
-def _make_crlf_codeblock(lang: str, body: str) -> str:
-    # GitHub seems to use CRLF for everything...
-    return f"```{lang}\n{body}\n```".replace("\n", "\r\n")
 
 
 async def _get_event(entity_gist: EntityGist, comment_id: int) -> Comment | None:
