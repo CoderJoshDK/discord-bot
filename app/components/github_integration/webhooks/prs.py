@@ -19,6 +19,7 @@ from app.components.github_integration.webhooks.vouch import (
     extract_vouch_details,
     is_vouch_pr,
 )
+from toolbox.github import prettify_suggestions
 from toolbox.misc import format_event_sender
 
 if TYPE_CHECKING:
@@ -298,7 +299,7 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
 
     @webhook.event.pull_request_review_comment.created
     async def created(event: events.PullRequestReviewCommentCreated) -> None:
-        pr, content = event.pull_request, event.comment.body
+        pr, content = event.pull_request, prettify_suggestions(event.comment)
 
         if event.sender.login == COPILOT_LOGIN:
             # Ignore, we don't need the spam.
