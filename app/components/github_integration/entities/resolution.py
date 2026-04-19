@@ -44,10 +44,8 @@ def remove_codeblocks(content: str) -> str:
 
 
 async def find_repo_owner(name: str) -> str:
-    resp = (
-        await gh()
-        .rest("2022-11-28")
-        .search.async_repos(q=name, sort="stars", order="desc", per_page=20)
+    resp = await gh().rest.search.async_repos(
+        q=name, sort="stars", order="desc", per_page=20
     )
     return next(
         r.owner.login
