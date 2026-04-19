@@ -378,7 +378,7 @@ async def _get_pr_review_comment(
     entity = await entity_cache.get(entity_gist.cache_key)
     return entity and Comment(
         author=_make_author(comment.user),
-        body=prettify_suggestions(comment),
+        body=prettify_suggestions(comment) or comment.body,
         reactions=_make_reactions(comment.reactions),
         entity=entity,
         entity_gist=entity_gist,

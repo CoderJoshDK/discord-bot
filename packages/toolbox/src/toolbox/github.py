@@ -23,11 +23,11 @@ def format_diff_note(additions: int, deletions: int, changed_files: int) -> str 
 def prettify_suggestions(
     comment: PullRequestReviewComment
     | WebhookPullRequestReviewCommentCreatedPropComment,
-) -> str:
+) -> str | None:
     body = comment.body.replace("\r\n", "\n")
     suggestions = [cb for cb in extract_codeblocks(body) if cb.lang == "suggestion"]
     if not suggestions:
-        return body
+        return None
 
     start = cast("int | None", comment.original_start_line)
     end = cast("int", comment.original_line)
