@@ -16,13 +16,13 @@ from toolbox.discord import (
     dynamic_timestamp,
     suppress_embeds_after_delay,
 )
+from toolbox.github import format_diff_note
 from toolbox.linker import (
     ItemActions,
     MessageLinker,
     ProcessedMessage,
     remove_view_after_delay,
 )
-from toolbox.misc import format_diff_note
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterable

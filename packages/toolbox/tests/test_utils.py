@@ -19,13 +19,9 @@ from toolbox.discord import (
     pretty_print_account,
     suppress_embeds_after_delay,
 )
+from toolbox.github import format_diff_note
 from toolbox.messages import is_attachment_only
-from toolbox.misc import (
-    aenumerate,
-    async_process_check_output,
-    format_diff_note,
-    truncate,
-)
+from toolbox.misc import aenumerate, async_process_check_output, truncate
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
