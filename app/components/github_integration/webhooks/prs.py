@@ -300,6 +300,7 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
     @webhook.event.pull_request_review_comment.created
     async def created(event: events.PullRequestReviewCommentCreated) -> None:
         pr, content = event.pull_request, prettify_suggestions(event.comment)
+        no_suggestions_present = content == event.comment.body
 
         if event.sender.login == COPILOT_LOGIN:
             # Ignore, we don't need the spam.
@@ -308,7 +309,7 @@ def register_hooks(webhook: Monalisten, vouch_queue: VouchQueue) -> None:  # noq
 
         hunk = _reduce_diff_hunk(event.comment.diff_hunk)
         hunk_can_fit = 500 - len(content) - len(hunk) - HUNK_CODEBLOCK_OVERHEAD >= 0
-        if hunk.strip() and hunk_can_fit:
+        if hunk.strip() and hunk_can_fit and no_suggestions_present:
             content = HUNK_TEMPLATE.format(hunk=hunk, content=content)
 
         await send_embed(
